@@ -169,7 +169,7 @@ pub fn run() -> std::io::Result<()> {
     let mut cartridge_data: Vec<u8> = Vec::new();
 
     for (index, voice) in cartridge.iter().enumerate() {
-        let mut voice_data = voice.as_packed_data();
+        let mut voice_data = voice.to_packed_bytes();
         println!("Voice #{} packed data length = {} bytes", index, voice_data.len());
         cartridge_data.append(&mut voice_data);
     }
@@ -225,28 +225,16 @@ impl EnvelopeGenerator {
     // Initialize with the DX7 voice defaults
     pub fn new() -> Self {
         Self {
-            rate1: 99,
-            rate2: 99,
-            rate3: 99,
-            rate4: 99,
-            level1: 99,
-            level2: 99,
-            level3: 99,
-            level4: 0,
+            rate1: 99, rate2: 99, rate3: 99, rate4: 99,
+            level1: 99, level2: 99, level3: 99, level4: 0,
         }
     }
 
-    pub fn as_data(&self) -> Vec<u8> {
-        let mut data: Vec<u8> = Vec::new();
-        data.push(self.rate1);
-        data.push(self.rate2);
-        data.push(self.rate3);
-        data.push(self.rate4);
-        data.push(self.level1);
-        data.push(self.level2);
-        data.push(self.level3);
-        data.push(self.level4);
-        data
+    pub fn to_bytes(&self) -> Vec<u8> {
+        vec![
+            self.rate1, self.rate2, self.rate3, self.rate4, 
+            self.level1, self.level2, self.level3, self.level4
+        ]
     }
 }
 
@@ -272,7 +260,7 @@ struct ScalingCurve {
 }
 
 impl ScalingCurve {
-    pub fn as_data(&self) -> u8 {
+    pub fn to_bytes(&self) -> u8 {
         match self {
             ScalingCurve { curve: CurveStyle::Linear, positive: true } => 1,
             ScalingCurve { curve: CurveStyle::Linear, positive: false } => 0,
@@ -303,29 +291,23 @@ impl KeyboardLevelScaling {
         }
     }
 
-    pub fn as_data(&self) -> Vec<u8> {
-        let mut data: Vec<u8> = Vec::new();
-        data.push(self.breakpoint);
-        data.push(self.left_depth);
-        data.push(self.right_depth);
-        data.push(self.left_curve.as_data());
-        data.push(self.right_curve.as_data());
-        data
+    pub fn to_bytes(&self) -> Vec<u8> {
+        vec![
+            self.breakpoint,
+            self.left_depth,
+            self.right_depth,
+            self.left_curve.to_bytes(),
+            self.right_curve.to_bytes()
+        ]
     }
 
-    pub fn as_packed_data(&self) -> Vec<u8> {
-        let mut data: Vec<u8> = Vec::new();
-
-        data.push(self.breakpoint);
-        data.push(self.left_depth);
-        data.push(self.right_depth);
-
-        let left_byte = self.left_curve.as_data();
-        let right_byte = self.right_curve.as_data();
-        let curve_byte = left_byte | (right_byte << 2);
-        data.push(curve_byte);
-
-        data
+    pub fn to_packed_bytes(&self) -> Vec<u8> {
+        vec![
+            self.breakpoint,
+            self.left_depth,
+            self.right_depth,
+            self.left_curve.to_bytes() | (self.right_curve.to_bytes() << 2)
+        ]
     }
 }
 
@@ -366,10 +348,10 @@ impl Operator {
         }
     }
 
-    pub fn as_data(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
-        data.append(&mut self.eg.as_data());
-        data.append(&mut self.kbd_level_scaling.as_data());
+        data.append(&mut self.eg.to_bytes());
+        data.append(&mut self.kbd_level_scaling.to_bytes());
         data.push(self.kbd_rate_scaling);
         data.push(self.amp_mod_sens);
         data.push(self.key_vel_sens);
@@ -381,14 +363,14 @@ impl Operator {
         data
     }
 
-    pub fn as_packed_data(&self) -> Vec<u8> {
+    pub fn to_packed_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
 
-        let mut eg_data = self.eg.as_data(); // not packed!
+        let mut eg_data = self.eg.to_bytes(); // not packed!
         println!("  EG: {} bytes, {:?}", eg_data.len(), eg_data);        
         data.append(&mut eg_data);
 
-        let mut kls_data = self.kbd_level_scaling.as_packed_data();
+        let mut kls_data = self.kbd_level_scaling.to_packed_bytes();
         println!("  KLS: {} bytes, {:?}", kls_data.len(), kls_data);        
         data.append(&mut kls_data);
 
@@ -447,29 +429,25 @@ impl LFO {
         }
     }
     
-    pub fn as_data(&self) -> Vec<u8> {
-        let mut data: Vec<u8> = Vec::new();
-        data.push(self.speed);
-        data.push(self.delay);
-        data.push(self.pmd);
-        data.push(self.amd);
-        data.push(if self.sync { 1 } else { 0 });
-        data.push(self.wave as u8);
-        data
+    pub fn to_bytes(&self) -> Vec<u8> {
+        vec![
+            self.speed,
+            self.delay,
+            self.pmd,
+            self.amd,
+            if self.sync { 1 } else { 0 },
+            self.wave as u8,
+        ]
     }
 
-    pub fn as_packed_data(&self) -> Vec<u8> {
-        let mut data: Vec<u8> = Vec::new();
-
-        data.push(self.speed);
-        data.push(self.delay);
-        data.push(self.pmd);
-        data.push(self.amd);
-
-        let byte116 = (if self.sync { 1 } else { 0 }) | ((self.wave as u8) << 1);
-        data.push(byte116);
-
-        data
+    pub fn to_packed_bytes(&self) -> Vec<u8> {
+        vec![
+            self.speed,
+            self.delay,
+            self.pmd,
+            self.amd,
+            (if self.sync { 1 } else { 0 }) | ((self.wave as u8) << 1),
+        ]
     }
 }
 
@@ -514,21 +492,21 @@ impl Voice {
         }
     }
 
-    pub fn as_data(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
-        data.append(&mut self.op6.as_data());
-        data.append(&mut self.op5.as_data());
-        data.append(&mut self.op4.as_data());
-        data.append(&mut self.op3.as_data());
-        data.append(&mut self.op2.as_data());
-        data.append(&mut self.op1.as_data());
+        data.append(&mut self.op6.to_bytes());
+        data.append(&mut self.op5.to_bytes());
+        data.append(&mut self.op4.to_bytes());
+        data.append(&mut self.op3.to_bytes());
+        data.append(&mut self.op2.to_bytes());
+        data.append(&mut self.op1.to_bytes());
 
-        data.append(&mut self.peg.as_data());
+        data.append(&mut self.peg.to_bytes());
 
         data.push(self.alg);
         data.push(self.feedback);
         data.push(if self.osc_sync { 1 } else { 0 });
-        data.append(&mut self.lfo.as_data());
+        data.append(&mut self.lfo.to_bytes());
         data.push(self.pitch_mod_sens);
         data.push(self.transpose);
 
@@ -548,34 +526,34 @@ impl Voice {
         data
     }
 
-    pub fn as_packed_data(&self) -> Vec<u8> {
+    pub fn to_packed_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
 
-        let mut op6_data = self.op6.as_packed_data();
+        let mut op6_data = self.op6.to_packed_bytes();
         println!("OP6: {} bytes, {:?}", op6_data.len(), op6_data);
         data.append(&mut op6_data);
 
-        let mut op5_data = self.op5.as_packed_data();
+        let mut op5_data = self.op5.to_packed_bytes();
         println!("OP5: {} bytes, {:?}", op5_data.len(), op5_data);        
         data.append(&mut op5_data);
 
-        let mut op4_data = self.op4.as_packed_data();
+        let mut op4_data = self.op4.to_packed_bytes();
         println!("OP4: {} bytes, {:?}", op4_data.len(), op4_data);        
         data.append(&mut op4_data);
 
-        let mut op3_data = self.op3.as_packed_data();
+        let mut op3_data = self.op3.to_packed_bytes();
         println!("OP3: {} bytes, {:?}", op3_data.len(), op3_data);        
         data.append(&mut op3_data);
 
-        let mut op2_data = self.op2.as_packed_data();
+        let mut op2_data = self.op2.to_packed_bytes();
         println!("OP2: {} bytes, {:?}", op2_data.len(), op2_data);        
         data.append(&mut op2_data);
 
-        let mut op1_data = self.op1.as_packed_data();
+        let mut op1_data = self.op1.to_packed_bytes();
         println!("OP1: {} bytes, {:?}", op1_data.len(), op1_data);        
         data.append(&mut op1_data);
 
-        let mut peg_data = self.peg.as_data(); // not packed!
+        let mut peg_data = self.peg.to_bytes(); // not packed!
         println!("PEG: {} bytes, {:?}", peg_data.len(), peg_data);        
         data.append(&mut peg_data);
 
@@ -586,7 +564,7 @@ impl Voice {
         data.push(byte111);
         println!("  b111: {:#08b}", byte111);
 
-        let mut lfo_data = self.lfo.as_packed_data();
+        let mut lfo_data = self.lfo.to_packed_bytes();
         *lfo_data.last_mut().unwrap() |= self.pitch_mod_sens << 5;
         println!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);        
         data.append(&mut lfo_data);
@@ -616,7 +594,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_eg_as_data() {
+    fn test_eg_to_bytes() {
         let eg = EnvelopeGenerator {
             rate1: 64,
             rate2: 64,
@@ -627,47 +605,47 @@ mod tests {
             level3: 32,
             level4: 32,
         };
-        assert_eq!(eg.as_data(), vec![64u8, 64, 64, 64, 32, 32, 32, 32]);
+        assert_eq!(eg.to_bytes(), vec![64u8, 64, 64, 64, 32, 32, 32, 32]);
     }
 
     #[test]
-    fn test_scaling_curve_exp_pos_as_data() {
+    fn test_scaling_curve_exp_pos_to_bytes() {
         let curve_exp_pos = ScalingCurve {
             curve: CurveStyle::Exponential, 
             positive: true
         };
-        assert_eq!(curve_exp_pos.as_data(), 3);
+        assert_eq!(curve_exp_pos.to_bytes(), 3);
     }
 
     #[test]
-    fn test_scaling_curve_exp_neg_as_data() {
+    fn test_scaling_curve_exp_neg_to_bytes() {
         let curve_exp_neg = ScalingCurve {
             curve: CurveStyle::Exponential, 
             positive: false
         };
-        assert_eq!(curve_exp_neg.as_data(), 2);
+        assert_eq!(curve_exp_neg.to_bytes(), 2);
     }
 
     #[test]
-    fn test_scaling_curve_lin_pos_as_data() {
+    fn test_scaling_curve_lin_pos_to_bytes() {
         let curve_lin_pos = ScalingCurve {
             curve: CurveStyle::Linear, 
             positive: true
         };
-        assert_eq!(curve_lin_pos.as_data(), 1);
+        assert_eq!(curve_lin_pos.to_bytes(), 1);
     }
 
     #[test]
-    fn test_scaling_curve_lin_neg_as_data() {
+    fn test_scaling_curve_lin_neg_to_bytes() {
         let curve_lin_neg = ScalingCurve {
             curve: CurveStyle::Linear, 
             positive: false
         };
-        assert_eq!(curve_lin_neg.as_data(), 0);
+        assert_eq!(curve_lin_neg.to_bytes(), 0);
     }
 
     #[test]
-    fn test_kbd_level_scaling_as_packed_data() {
+    fn test_kbd_level_scaling_to_packed_bytes() {
         let ks = KeyboardLevelScaling {
             breakpoint: 60, 
             left_depth: 54, 
@@ -683,13 +661,13 @@ mod tests {
         };
 
         assert_eq!(
-            ks.as_packed_data(),
+            ks.to_packed_bytes(),
             vec![60, 54, 50, 0b00001010]
         )
     }
 
     #[test]
-    fn test_op_as_packed_data() {
+    fn test_op_to_packed_bytes() {
         let op = Operator {
             eg: EnvelopeGenerator {
                 rate1: 49, 
@@ -723,7 +701,7 @@ mod tests {
             fine: 0, detune: 0
         };
 
-        let data = op.as_packed_data();
+        let data = op.to_packed_bytes();
         assert_eq!(
             data, 
             vec![49, 99, 28, 68, 99, 98, 91, 0, 60, 54, 50, 0b00001010, 0b00000100, 0b0001000, 82, 0b0000010, 0]
@@ -732,16 +710,16 @@ mod tests {
     }
 
     #[test]
-    fn test_lfo_as_packed_data() {
+    fn test_lfo_to_packed_bytes() {
         let lfo = LFO { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LFOWaveform::Sine };
         assert_eq!(
-            lfo.as_packed_data(),
+            lfo.to_packed_bytes(),
             vec![37, 0, 5, 0, 0b00001000]
         );
     }
 
     #[test]
-    fn test_voice_as_packed_data() {
+    fn test_voice_to_packed_bytes() {
         let op6 = Operator {
             eg: EnvelopeGenerator {
                 rate1: 49, 
@@ -895,7 +873,7 @@ mod tests {
         };
     
         assert_eq!(
-            brass1.as_packed_data(),
+            brass1.to_packed_bytes(),
             vec![
                 // op6
                 49, 99, 28, 68, 99, 98, 91, 0,
