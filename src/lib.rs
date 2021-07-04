@@ -14,25 +14,25 @@ pub fn run() -> std::io::Result<()> {
 
     let op6 = Operator {
         eg: EnvelopeGenerator {
-            rate1: 49, 
-            rate2: 99, 
-            rate3: 28, 
-            rate4: 68, 
-            level1: 99, 
-            level2: 98, 
-            level3: 91, 
+            rate1: 49,
+            rate2: 99,
+            rate3: 28,
+            rate4: 68,
+            level1: 99,
+            level2: 98,
+            level3: 91,
             level4: 0,
         },
         kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60, 
-            left_depth: 54, 
-            right_depth: 50, 
+            breakpoint: 60,
+            left_depth: 54,
+            right_depth: 50,
             left_curve: ScalingCurve {
-                curve: CurveStyle::Exponential, 
+                curve: CurveStyle::Exponential,
                 positive: false
-            }, 
+            },
             right_curve: ScalingCurve {
-                curve: CurveStyle::Exponential, 
+                curve: CurveStyle::Exponential,
                 positive: false
             },
         },
@@ -40,106 +40,106 @@ pub fn run() -> std::io::Result<()> {
         amp_mod_sens: 0,
         key_vel_sens: 2,
         output_level: 82,
-        mode: OperatorMode::Ratio, 
-        coarse: 1, 
+        mode: OperatorMode::Ratio,
+        coarse: 1,
         fine: 0, detune: 0
     };
 
     let op5 = Operator {
-        eg: EnvelopeGenerator { 
-            rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
-            level1: 99, level2: 98, level3: 98, level4: 0 
+        eg: EnvelopeGenerator {
+            rate1: 79, rate2: 36, rate3: 41, rate4: 71,
+            level1: 99, level2: 98, level3: 98, level4: 0
         },
-        kbd_level_scaling: KeyboardLevelScaling { 
-            breakpoint: 60, left_depth: 0, right_depth: 0, 
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+        kbd_level_scaling: KeyboardLevelScaling {
+            breakpoint: 60, left_depth: 0, right_depth: 0,
+            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
         },
-        kbd_rate_scaling: 4, 
-        amp_mod_sens: 0, 
-        key_vel_sens: 2, 
-        output_level: 98, 
-        mode: OperatorMode::Ratio, 
+        kbd_rate_scaling: 4,
+        amp_mod_sens: 0,
+        key_vel_sens: 2,
+        output_level: 98,
+        mode: OperatorMode::Ratio,
         coarse: 1, fine: 0, detune: 0
     };
 
     let op4 = Operator {
         eg: EnvelopeGenerator {
-            rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
+            rate1: 79, rate2: 36, rate3: 41, rate4: 71,
             level1: 99, level2: 98, level3: 98, level4: 0
         },
         kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60, left_depth: 0, right_depth: 0, 
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+            breakpoint: 60, left_depth: 0, right_depth: 0,
+            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
         },
         kbd_rate_scaling: 4,
-        amp_mod_sens: 0, 
-        key_vel_sens: 2, 
-        output_level: 99, 
-        mode: OperatorMode::Ratio, 
-        coarse: 1, 
-        fine: 0, 
+        amp_mod_sens: 0,
+        key_vel_sens: 2,
+        output_level: 99,
+        mode: OperatorMode::Ratio,
+        coarse: 1,
+        fine: 0,
         detune: 0
     };
 
     let op3 = Operator {
         eg: EnvelopeGenerator {
-            rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
+            rate1: 79, rate2: 36, rate3: 41, rate4: 71,
             level1: 99, level2: 98, level3: 98, level4: 0
         },
         kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60, left_depth: 0, right_depth: 0, 
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+            breakpoint: 60, left_depth: 0, right_depth: 0,
+            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
         },
         kbd_rate_scaling: 4,
-        amp_mod_sens: 0, 
-        key_vel_sens: 2, 
-        output_level: 99, 
-        mode: OperatorMode::Ratio, 
-        coarse: 1, 
-        fine: 0, 
+        amp_mod_sens: 0,
+        key_vel_sens: 2,
+        output_level: 99,
+        mode: OperatorMode::Ratio,
+        coarse: 1,
+        fine: 0,
         detune: 0
     };
 
     let op2 = Operator {
         eg: EnvelopeGenerator {
-            rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
+            rate1: 79, rate2: 36, rate3: 41, rate4: 71,
             level1: 99, level2: 98, level3: 98, level4: 0
         },
         kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60, left_depth: 0, right_depth: 0, 
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+            breakpoint: 60, left_depth: 0, right_depth: 0,
+            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
         },
         kbd_rate_scaling: 4,
-        amp_mod_sens: 0, 
-        key_vel_sens: 2, 
-        output_level: 99, 
-        mode: OperatorMode::Ratio, 
-        coarse: 1, 
-        fine: 0, 
+        amp_mod_sens: 0,
+        key_vel_sens: 2,
+        output_level: 99,
+        mode: OperatorMode::Ratio,
+        coarse: 1,
+        fine: 0,
         detune: 0
     };
 
     let op1 = Operator {
         eg: EnvelopeGenerator {
-            rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
+            rate1: 79, rate2: 36, rate3: 41, rate4: 71,
             level1: 99, level2: 98, level3: 98, level4: 0
         },
         kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60, left_depth: 0, right_depth: 0, 
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+            breakpoint: 60, left_depth: 0, right_depth: 0,
+            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
         },
         kbd_rate_scaling: 4,
-        amp_mod_sens: 0, 
-        key_vel_sens: 2, 
-        output_level: 99, 
-        mode: OperatorMode::Ratio, 
-        coarse: 1, 
-        fine: 0, 
+        amp_mod_sens: 0,
+        key_vel_sens: 2,
+        output_level: 99,
+        mode: OperatorMode::Ratio,
+        coarse: 1,
+        fine: 0,
         detune: 0
     };
 
@@ -151,15 +151,15 @@ pub fn run() -> std::io::Result<()> {
         op5: op5,
         op6: op6,
         peg: EnvelopeGenerator {
-            rate1: 84, rate2: 95, rate3: 95, rate4: 60, 
+            rate1: 84, rate2: 95, rate3: 95, rate4: 60,
             level1: 50, level2: 50, level3: 50, level4: 50
-        }, 
-        alg: 21,  // algorithm 22 - 1 
-        feedback: 7, 
-        osc_sync: false, 
+        },
+        alg: 21,  // algorithm 22 - 1
+        feedback: 7,
+        osc_sync: false,
         lfo: LFO { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LFOWaveform::Triangle },
-        pitch_mod_sens: 3, 
-        transpose: 60, 
+        pitch_mod_sens: 3,
+        transpose: 60,
         name: "BRASS 1".to_string(),
         op_flags: [true, true, true, true, true, true],
     };
@@ -185,7 +185,7 @@ pub fn run() -> std::io::Result<()> {
         0x43,   // Yamaha manufacturer ID
         0x00,   // MIDI channel 1
         0x09,   // format = 9 (32 voices)
-        0x20,   // byte count MSB 
+        0x20,   // byte count MSB
         0x00,   // byte count LSB
     ];
     println!("header length = {} bytes", header.len());
@@ -218,7 +218,7 @@ struct EnvelopeGenerator {
     level1: u8,
     level2: u8,
     level3: u8,
-    level4: u8    
+    level4: u8
 }
 
 impl EnvelopeGenerator {
@@ -232,7 +232,7 @@ impl EnvelopeGenerator {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
-            self.rate1, self.rate2, self.rate3, self.rate4, 
+            self.rate1, self.rate2, self.rate3, self.rate4,
             self.level1, self.level2, self.level3, self.level4
         ]
     }
@@ -241,7 +241,7 @@ impl EnvelopeGenerator {
 impl fmt::Display for EnvelopeGenerator {
     // This trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "R1={} L1={} R2={} L2={} R3={} L3={} R4={} L4={}", 
+        write!(f, "R1={} L1={} R2={} L2={} R3={} L3={} R4={} L4={}",
             self.rate1, self.rate2, self.rate3, self.rate4,
             self.level1, self.level2, self.level3, self.level4)
     }
@@ -297,7 +297,7 @@ impl KeyboardLevelScaling {
             self.left_depth,
             self.right_depth,
             self.left_curve.to_bytes(),
-            self.right_curve.to_bytes()
+            self.right_curve.to_bytes(),
         ]
     }
 
@@ -306,7 +306,7 @@ impl KeyboardLevelScaling {
             self.breakpoint,
             self.left_depth,
             self.right_depth,
-            self.left_curve.to_bytes() | (self.right_curve.to_bytes() << 2)
+            self.left_curve.to_bytes() | (self.right_curve.to_bytes() << 2),
         ]
     }
 }
@@ -367,28 +367,28 @@ impl Operator {
         let mut data: Vec<u8> = Vec::new();
 
         let mut eg_data = self.eg.to_bytes(); // not packed!
-        println!("  EG: {} bytes, {:?}", eg_data.len(), eg_data);        
+        println!("  EG: {} bytes, {:?}", eg_data.len(), eg_data);
         data.append(&mut eg_data);
 
         let mut kls_data = self.kbd_level_scaling.to_packed_bytes();
-        println!("  KLS: {} bytes, {:?}", kls_data.len(), kls_data);        
+        println!("  KLS: {} bytes, {:?}", kls_data.len(), kls_data);
         data.append(&mut kls_data);
 
         let byte12 = self.kbd_rate_scaling | (self.detune << 3);
-        println!("  b12: {:#08b}", byte12);        
+        println!("  b12: {:#08b}", byte12);
         data.push(byte12);
 
         let byte13 = self.amp_mod_sens | (self.key_vel_sens << 2);
-        println!("  b13: {:#08b}", byte12);        
+        println!("  b13: {:#08b}", byte12);
         data.push(byte13);
-        
+
         println!("  OL:  {:#08b}", self.output_level);
         data.push(self.output_level);
-        
+
         let byte15 = self.mode as u8 | (self.coarse << 1);
-        println!("  b15: {:#08b}", byte15);        
+        println!("  b15: {:#08b}", byte15);
         data.push(byte15);
-        
+
         println!("  FF:  {:#08b}", self.fine);
         data.push(self.fine);
 
@@ -428,7 +428,7 @@ impl LFO {
             wave: LFOWaveform::Triangle,
         }
     }
-    
+
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
             self.speed,
@@ -479,7 +479,7 @@ impl Voice {
             op3: Operator { output_level: 0, ..Operator::new() },
             op4: Operator { output_level: 0, ..Operator::new() },
             op5: Operator { output_level: 0, ..Operator::new() },
-            op6: Operator { output_level: 0, ..Operator::new() },    
+            op6: Operator { output_level: 0, ..Operator::new() },
             peg: EnvelopeGenerator { level1: 50, level2: 50, level3: 50, level4: 50, ..EnvelopeGenerator::new() },
             alg: 0,
             feedback: 0,
@@ -534,31 +534,31 @@ impl Voice {
         data.append(&mut op6_data);
 
         let mut op5_data = self.op5.to_packed_bytes();
-        println!("OP5: {} bytes, {:?}", op5_data.len(), op5_data);        
+        println!("OP5: {} bytes, {:?}", op5_data.len(), op5_data);
         data.append(&mut op5_data);
 
         let mut op4_data = self.op4.to_packed_bytes();
-        println!("OP4: {} bytes, {:?}", op4_data.len(), op4_data);        
+        println!("OP4: {} bytes, {:?}", op4_data.len(), op4_data);
         data.append(&mut op4_data);
 
         let mut op3_data = self.op3.to_packed_bytes();
-        println!("OP3: {} bytes, {:?}", op3_data.len(), op3_data);        
+        println!("OP3: {} bytes, {:?}", op3_data.len(), op3_data);
         data.append(&mut op3_data);
 
         let mut op2_data = self.op2.to_packed_bytes();
-        println!("OP2: {} bytes, {:?}", op2_data.len(), op2_data);        
+        println!("OP2: {} bytes, {:?}", op2_data.len(), op2_data);
         data.append(&mut op2_data);
 
         let mut op1_data = self.op1.to_packed_bytes();
-        println!("OP1: {} bytes, {:?}", op1_data.len(), op1_data);        
+        println!("OP1: {} bytes, {:?}", op1_data.len(), op1_data);
         data.append(&mut op1_data);
 
         let mut peg_data = self.peg.to_bytes(); // not packed!
-        println!("PEG: {} bytes, {:?}", peg_data.len(), peg_data);        
+        println!("PEG: {} bytes, {:?}", peg_data.len(), peg_data);
         data.append(&mut peg_data);
 
         data.push(self.alg);
-        println!("ALG: {}", self.alg);        
+        println!("ALG: {}", self.alg);
 
         let byte111 = self.feedback | ((if self.osc_sync { 1 } else { 0 }) << 3);
         data.push(byte111);
@@ -566,12 +566,12 @@ impl Voice {
 
         let mut lfo_data = self.lfo.to_packed_bytes();
         *lfo_data.last_mut().unwrap() |= self.pitch_mod_sens << 5;
-        println!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);        
+        println!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);
         data.append(&mut lfo_data);
 
         //let (all_but_last, last) = lfo_data.split_at(lfo_data.len() - 1);
         //data.append(&mut all_but_last.to_vec());  // leave the last byte out for now
-        
+
         // Add to the last byte the pitch modulation sensitivity
         //let mut last_byte = last[0];  // this slice has only this one byte
         //last_byte |= self.pitch_mod_sens << 4;  // somewhat unclear if shift by 4 or 5
@@ -611,7 +611,7 @@ mod tests {
     #[test]
     fn test_scaling_curve_exp_pos_to_bytes() {
         let curve_exp_pos = ScalingCurve {
-            curve: CurveStyle::Exponential, 
+            curve: CurveStyle::Exponential,
             positive: true
         };
         assert_eq!(curve_exp_pos.to_bytes(), 3);
@@ -620,7 +620,7 @@ mod tests {
     #[test]
     fn test_scaling_curve_exp_neg_to_bytes() {
         let curve_exp_neg = ScalingCurve {
-            curve: CurveStyle::Exponential, 
+            curve: CurveStyle::Exponential,
             positive: false
         };
         assert_eq!(curve_exp_neg.to_bytes(), 2);
@@ -629,7 +629,7 @@ mod tests {
     #[test]
     fn test_scaling_curve_lin_pos_to_bytes() {
         let curve_lin_pos = ScalingCurve {
-            curve: CurveStyle::Linear, 
+            curve: CurveStyle::Linear,
             positive: true
         };
         assert_eq!(curve_lin_pos.to_bytes(), 1);
@@ -638,7 +638,7 @@ mod tests {
     #[test]
     fn test_scaling_curve_lin_neg_to_bytes() {
         let curve_lin_neg = ScalingCurve {
-            curve: CurveStyle::Linear, 
+            curve: CurveStyle::Linear,
             positive: false
         };
         assert_eq!(curve_lin_neg.to_bytes(), 0);
@@ -647,17 +647,17 @@ mod tests {
     #[test]
     fn test_kbd_level_scaling_to_packed_bytes() {
         let ks = KeyboardLevelScaling {
-            breakpoint: 60, 
-            left_depth: 54, 
-            right_depth: 50, 
+            breakpoint: 60,
+            left_depth: 54,
+            right_depth: 50,
             left_curve: ScalingCurve {
-                curve: CurveStyle::Exponential, 
+                curve: CurveStyle::Exponential,
                 positive: false
-            }, 
+            },
             right_curve: ScalingCurve {
-                curve: CurveStyle::Exponential, 
+                curve: CurveStyle::Exponential,
                 positive: false
-            },            
+            },
         };
 
         assert_eq!(
@@ -670,25 +670,25 @@ mod tests {
     fn test_op_to_packed_bytes() {
         let op = Operator {
             eg: EnvelopeGenerator {
-                rate1: 49, 
-                rate2: 99, 
-                rate3: 28, 
-                rate4: 68, 
-                level1: 99, 
-                level2: 98, 
-                level3: 91, 
+                rate1: 49,
+                rate2: 99,
+                rate3: 28,
+                rate4: 68,
+                level1: 99,
+                level2: 98,
+                level3: 91,
                 level4: 0,
             },
             kbd_level_scaling: KeyboardLevelScaling {
-                breakpoint: 60, 
-                left_depth: 54, 
-                right_depth: 50, 
+                breakpoint: 60,
+                left_depth: 54,
+                right_depth: 50,
                 left_curve: ScalingCurve {
-                    curve: CurveStyle::Exponential, 
+                    curve: CurveStyle::Exponential,
                     positive: false
-                }, 
+                },
                 right_curve: ScalingCurve {
-                    curve: CurveStyle::Exponential, 
+                    curve: CurveStyle::Exponential,
                     positive: false
                 },
             },
@@ -696,14 +696,14 @@ mod tests {
             amp_mod_sens: 0,
             key_vel_sens: 2,
             output_level: 82,
-            mode: OperatorMode::Ratio, 
-            coarse: 1, 
+            mode: OperatorMode::Ratio,
+            coarse: 1,
             fine: 0, detune: 0
         };
 
         let data = op.to_packed_bytes();
         assert_eq!(
-            data, 
+            data,
             vec![49, 99, 28, 68, 99, 98, 91, 0, 60, 54, 50, 0b00001010, 0b00000100, 0b0001000, 82, 0b0000010, 0]
         );
         assert_eq!(data.len(), 17);
@@ -722,25 +722,25 @@ mod tests {
     fn test_voice_to_packed_bytes() {
         let op6 = Operator {
             eg: EnvelopeGenerator {
-                rate1: 49, 
-                rate2: 99, 
-                rate3: 28, 
-                rate4: 68, 
-                level1: 99, 
-                level2: 98, 
-                level3: 91, 
+                rate1: 49,
+                rate2: 99,
+                rate3: 28,
+                rate4: 68,
+                level1: 99,
+                level2: 98,
+                level3: 91,
                 level4: 0,
             },
             kbd_level_scaling: KeyboardLevelScaling {
-                breakpoint: 60, 
-                left_depth: 54, 
-                right_depth: 50, 
+                breakpoint: 60,
+                left_depth: 54,
+                right_depth: 50,
                 left_curve: ScalingCurve {
-                    curve: CurveStyle::Exponential, 
+                    curve: CurveStyle::Exponential,
                     positive: false
-                }, 
+                },
                 right_curve: ScalingCurve {
-                    curve: CurveStyle::Exponential, 
+                    curve: CurveStyle::Exponential,
                     positive: false
                 },
             },
@@ -748,109 +748,109 @@ mod tests {
             amp_mod_sens: 0,
             key_vel_sens: 2,
             output_level: 82,
-            mode: OperatorMode::Ratio, 
-            coarse: 1, 
+            mode: OperatorMode::Ratio,
+            coarse: 1,
             fine: 0, detune: 0
         };
-    
+
         let op5 = Operator {
-            eg: EnvelopeGenerator { 
-                rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
-                level1: 99, level2: 98, level3: 98, level4: 0 
+            eg: EnvelopeGenerator {
+                rate1: 79, rate2: 36, rate3: 41, rate4: 71,
+                level1: 99, level2: 98, level3: 98, level4: 0
             },
-            kbd_level_scaling: KeyboardLevelScaling { 
-                breakpoint: 60, left_depth: 0, right_depth: 0, 
-                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+            kbd_level_scaling: KeyboardLevelScaling {
+                breakpoint: 60, left_depth: 0, right_depth: 0,
+                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
                 right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             },
-            kbd_rate_scaling: 4, 
-            amp_mod_sens: 0, 
-            key_vel_sens: 2, 
-            output_level: 98, 
-            mode: OperatorMode::Ratio, 
+            kbd_rate_scaling: 4,
+            amp_mod_sens: 0,
+            key_vel_sens: 2,
+            output_level: 98,
+            mode: OperatorMode::Ratio,
             coarse: 1, fine: 0, detune: 0
         };
-        
+
         let op4 = Operator {
             eg: EnvelopeGenerator {
-                rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
+                rate1: 79, rate2: 36, rate3: 41, rate4: 71,
                 level1: 99, level2: 98, level3: 98, level4: 0
             },
             kbd_level_scaling: KeyboardLevelScaling {
-                breakpoint: 60, left_depth: 0, right_depth: 0, 
-                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+                breakpoint: 60, left_depth: 0, right_depth: 0,
+                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
                 right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             },
             kbd_rate_scaling: 4,
-            amp_mod_sens: 0, 
-            key_vel_sens: 2, 
-            output_level: 99, 
-            mode: OperatorMode::Ratio, 
-            coarse: 1, 
-            fine: 0, 
+            amp_mod_sens: 0,
+            key_vel_sens: 2,
+            output_level: 99,
+            mode: OperatorMode::Ratio,
+            coarse: 1,
+            fine: 0,
             detune: 0
         };
-        
+
         let op3 = Operator {
             eg: EnvelopeGenerator {
-                rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
+                rate1: 79, rate2: 36, rate3: 41, rate4: 71,
                 level1: 99, level2: 98, level3: 98, level4: 0
             },
             kbd_level_scaling: KeyboardLevelScaling {
-                breakpoint: 60, left_depth: 0, right_depth: 0, 
-                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+                breakpoint: 60, left_depth: 0, right_depth: 0,
+                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
                 right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             },
             kbd_rate_scaling: 4,
-            amp_mod_sens: 0, 
-            key_vel_sens: 2, 
-            output_level: 99, 
-            mode: OperatorMode::Ratio, 
-            coarse: 1, 
-            fine: 0, 
+            amp_mod_sens: 0,
+            key_vel_sens: 2,
+            output_level: 99,
+            mode: OperatorMode::Ratio,
+            coarse: 1,
+            fine: 0,
             detune: 0
         };
-        
+
         let op2 = Operator {
             eg: EnvelopeGenerator {
-                rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
+                rate1: 79, rate2: 36, rate3: 41, rate4: 71,
                 level1: 99, level2: 98, level3: 98, level4: 0
             },
             kbd_level_scaling: KeyboardLevelScaling {
-                breakpoint: 60, left_depth: 0, right_depth: 0, 
-                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+                breakpoint: 60, left_depth: 0, right_depth: 0,
+                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
                 right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             },
             kbd_rate_scaling: 4,
-            amp_mod_sens: 0, 
-            key_vel_sens: 2, 
-            output_level: 99, 
-            mode: OperatorMode::Ratio, 
-            coarse: 1, 
-            fine: 0, 
+            amp_mod_sens: 0,
+            key_vel_sens: 2,
+            output_level: 99,
+            mode: OperatorMode::Ratio,
+            coarse: 1,
+            fine: 0,
             detune: 0
         };
-    
+
         let op1 = Operator {
             eg: EnvelopeGenerator {
-                rate1: 79, rate2: 36, rate3: 41, rate4: 71, 
+                rate1: 79, rate2: 36, rate3: 41, rate4: 71,
                 level1: 99, level2: 98, level3: 98, level4: 0
             },
             kbd_level_scaling: KeyboardLevelScaling {
-                breakpoint: 60, left_depth: 0, right_depth: 0, 
-                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true }, 
+                breakpoint: 60, left_depth: 0, right_depth: 0,
+                left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
                 right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
             },
             kbd_rate_scaling: 4,
-            amp_mod_sens: 0, 
-            key_vel_sens: 2, 
-            output_level: 99, 
-            mode: OperatorMode::Ratio, 
-            coarse: 1, 
-            fine: 0, 
+            amp_mod_sens: 0,
+            key_vel_sens: 2,
+            output_level: 99,
+            mode: OperatorMode::Ratio,
+            coarse: 1,
+            fine: 0,
             detune: 0
         };
-    
+
         let brass1 = Voice {
             op1: op1,
             op2: op2,
@@ -859,19 +859,19 @@ mod tests {
             op5: op5,
             op6: op6,
             peg: EnvelopeGenerator {
-                rate1: 84, rate2: 95, rate3: 95, rate4: 60, 
+                rate1: 84, rate2: 95, rate3: 95, rate4: 60,
                 level1: 50, level2: 50, level3: 50, level4: 50
-            }, 
-            alg: 21,  // algorithm 22 - 1 
-            feedback: 7, 
-            osc_sync: false, 
+            },
+            alg: 21,  // algorithm 22 - 1
+            feedback: 7,
+            osc_sync: false,
             lfo: LFO { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LFOWaveform::Sine },
-            pitch_mod_sens: 3, 
-            transpose: 60, 
+            pitch_mod_sens: 3,
+            transpose: 60,
             name: "BRASS 1".to_string(),
             op_flags: [true, true, true, true, true, true],
         };
-    
+
         assert_eq!(
             brass1.to_packed_bytes(),
             vec![
@@ -912,7 +912,7 @@ mod tests {
                 60,  // transpose
 
                  // "BRASS 1" padded from right with spaces to 10 characters
-                0x42, 0x52, 0x41, 0x53, 0x53, 0x20, 0x31, 0x20, 0x20, 0x20, 
+                0x42, 0x52, 0x41, 0x53, 0x53, 0x20, 0x31, 0x20, 0x20, 0x20,
             ]
         )
     }
@@ -927,7 +927,7 @@ mod tests {
 
         // |765|4321|0
         // |PMS|LFW |S
-        
+
         let expected = 0b0_011_011_1;
         let mut actual = (if lfo.sync { 1 } else { 0 }) | ((lfo.wave as u8) << 1);
         actual |= pitch_mod_sens << 4;
