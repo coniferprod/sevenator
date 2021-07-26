@@ -1,5 +1,5 @@
 use sevenator::*;
 
-fn main() -> std::io::Result<()> {
-    sevenator::run()
+fn main() {
+    sevenator::run();
 }

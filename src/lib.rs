@@ -1,17 +1,9 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::fmt;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-pub fn run() -> std::io::Result<()> {
-    // Yamaha DX7 original ROM1A sound bank (data only, no SysEx header/terminator
-    // or checksum.)
-    let rom1a_data: [u8; 4096] = include!("rom1asyx.in");
-
-    // The checksum is 0x33
-    let rom1a_data_checksum = voice_checksum(&rom1a_data.to_vec());
-    assert_eq!(0x33, rom1a_data_checksum);
-    println!("ROM1A data checksum = {:X}h", rom1a_data_checksum);
-
+fn make_brass1() -> Voice {
     let op6 = Operator {
         eg: EnvelopeGenerator {
             rate1: 49,
@@ -143,7 +135,7 @@ pub fn run() -> std::io::Result<()> {
         detune: 0
     };
 
-    let brass1 = Voice {
+    Voice {
         op1: op1,
         op2: op2,
         op3: op3,
@@ -162,22 +154,92 @@ pub fn run() -> std::io::Result<()> {
         transpose: 60,
         name: "BRASS 1".to_string(),
         op_flags: [true, true, true, true, true, true],
+    }
+}
+
+// Makes an initialized voice. The defaults are as described in
+// Howard Massey's "The Complete DX7", Appendix B.
+fn make_init_voice() -> Voice {
+    let init_eg = EnvelopeGenerator {
+        rate1: 99, rate2: 99, rate3: 99, rate4: 99,
+        level1: 99, level2: 99, level3: 99, level4: 0,
     };
 
-    // Fill up a cartridge with the default voice
-    let cartridge = vec![Voice::new(); 32];
+    // Break point = A-1 for all operators
+    // Curve = -LIN for both curves, all operators
+    // Depth = 0 for both curves, all operators
+    let init_kbd_level_scaling = KeyboardLevelScaling {
+        breakpoint: 0, left_depth: 0, right_depth: 0,
+        left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: false },
+        right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: false },
+    };
+
+    let init_op1 = Operator {
+        eg: init_eg.clone(),
+        kbd_level_scaling: init_kbd_level_scaling.clone(),
+        kbd_rate_scaling: 0,
+        amp_mod_sens: 0,
+        key_vel_sens: 0,
+        output_level: 99,
+        mode: OperatorMode::Ratio,
+        coarse: 1,
+        fine: 0,
+        detune: 0
+    };
+
+    let init_op_rest = Operator {
+        output_level: 0,
+        ..init_op1
+    };
+
+    Voice {
+        op1: init_op1.clone(),
+        op2: init_op_rest.clone(),
+        op3: init_op_rest.clone(),
+        op4: init_op_rest.clone(),
+        op5: init_op_rest.clone(),
+        op6: init_op_rest.clone(),
+        peg: EnvelopeGenerator {
+            rate1: 99, rate2: 99, rate3: 99, rate4: 99,
+            level1: 50, level2: 50, level3: 50, level4: 50,
+        },
+        alg: 0, // algorithm #1
+        feedback: 0,
+        osc_sync: true, // osc key sync = on
+        lfo: LFO {
+            speed: 35,
+            delay: 0,
+            pmd: 0,
+            amd: 0,
+            sync: true,
+            wave: LFOWaveform::Triangle,
+        },
+        pitch_mod_sens: 3,
+        transpose: 60, // Middle C = C3 (Yamaha style, others call this C4)
+        name: "INIT VOICE".to_string(),
+        op_flags: [true, true, true, true, true, true],  // all operators ON
+    }
+}
+
+pub fn run() -> std::io::Result<()> {
+    //let brass1 = make_brass1();
+
+    // Get the default voice with `Voice::new()`.
+    // The `make_init_voice()` function makes exactly the original init voice.
+    // These should be more or less the same.
+    let cartridge = vec![make_init_voice(); 32];
     let mut cartridge_data: Vec<u8> = Vec::new();
 
     for (index, voice) in cartridge.iter().enumerate() {
         let mut voice_data = voice.to_packed_bytes();
-        println!("Voice #{} packed data length = {} bytes", index, voice_data.len());
+        eprintln!("Voice #{} packed data length = {} bytes", index, voice_data.len());
         cartridge_data.append(&mut voice_data);
     }
 
     // Compute the checksum before we add the SysEx header and terminator,
     // but don't add it yet -- only just before the terminator.
     let cartridge_checksum = voice_checksum(&cartridge_data);
-    println!("cartridge checksum = {:02X}h", cartridge_checksum);
+    eprintln!("cartridge checksum = {:02X}h", cartridge_checksum);
 
     // Insert the System Exclusive header at the beginning of the vector:
     let header = vec![
@@ -188,7 +250,7 @@ pub fn run() -> std::io::Result<()> {
         0x20,   // byte count MSB
         0x00,   // byte count LSB
     ];
-    println!("header length = {} bytes", header.len());
+    eprintln!("header length = {} bytes", header.len());
     // This may be a bit inefficient, but not too much.
     // The last byte of the header goes first to 0, then the others follow.
     for b in header.iter().rev() {
@@ -201,15 +263,20 @@ pub fn run() -> std::io::Result<()> {
     // Add the System Exclusive message terminator:
     cartridge_data.push(0xf7u8);
 
+    let now = SystemTime::now();
+    let epoch_now = now
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let filename = format!("cartridge-{:?}.syx", epoch_now.as_secs());
     {
-        let mut file = File::create("cartridge.syx")?;
+        let mut file = File::create(filename)?;
         file.write_all(&cartridge_data)?;
     }
 
     Ok(())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct EnvelopeGenerator {
     rate1: u8,
     rate2: u8,
@@ -222,11 +289,25 @@ struct EnvelopeGenerator {
 }
 
 impl EnvelopeGenerator {
-    // Initialize with the DX7 voice defaults
+    /// Creates a new EG with the DX7 voice defaults.
     pub fn new() -> Self {
         Self {
             rate1: 99, rate2: 99, rate3: 99, rate4: 99,
             level1: 99, level2: 99, level3: 99, level4: 0,
+        }
+    }
+
+    /*
+    From the Yamaha DX7 Operation Manual (p. 51):
+    "You can simulate an ADSR if you set the envelope as follows:
+    L1=99, L2=99, L4=0, and R2=99.
+    With these settings, then R1 becomes Attack time, R3 is Decay
+    time, L3 is Sustain level, and R4 is Release time."
+    */
+    pub fn adsr(attack: u8, decay: u8, sustain: u8, release: u8) -> Self {
+        Self {
+            rate1: attack, rate2: 99, rate3: decay, rate4: release,
+            level1: 99, level2: 99, level3: sustain, level4: 0,
         }
     }
 
@@ -239,7 +320,7 @@ impl EnvelopeGenerator {
 }
 
 impl fmt::Display for EnvelopeGenerator {
-    // This trait requires `fmt` with this exact signature.
+    // The display trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "R1={} L1={} R2={} L2={} R3={} L3={} R4={} L4={}",
             self.rate1, self.rate2, self.rate3, self.rate4,
@@ -253,7 +334,7 @@ enum CurveStyle {
     Exponential
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct ScalingCurve {
     curve: CurveStyle,
     positive: bool,  // true if positive, false if negative
@@ -270,7 +351,7 @@ impl ScalingCurve {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct KeyboardLevelScaling {
     breakpoint: u8, // 0 ~ 99 (A-1 ~ C8)
     left_depth: u8,
@@ -280,10 +361,10 @@ struct KeyboardLevelScaling {
 }
 
 impl KeyboardLevelScaling {
-    // Initialize with the DX7 voice defaults
+    /// Creates new keyboard level scaling settings with DX7 voice defaults.
     pub fn new() -> Self {
         Self {
-            breakpoint: 63,  // TODO: set to A-1 for all operators
+            breakpoint: 0,  // A-1
             left_depth:  0,
             right_depth: 0,
             left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: false },
@@ -332,7 +413,7 @@ struct Operator {
 }
 
 impl Operator {
-    // Initialize with the DX7 voice defaults
+    /// Creates a new operator and initializes it with the DX7 voice defaults.
     pub fn new() -> Self {
         Self {
             eg: EnvelopeGenerator::new(),
@@ -471,7 +552,7 @@ struct Voice {
 }
 
 impl Voice {
-    // Initialize with the DX7 voice defaults
+    /// Creates a new voice and initializes it with the DX7 voice defaults.
     pub fn new() -> Self {
         Self {
             op1: Operator { output_level: 0, ..Operator::new() },
@@ -592,6 +673,18 @@ impl Voice {
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+
+    #[test]
+    fn test_checksum() {
+        // Yamaha DX7 original ROM1A sound bank (data only, no SysEx header/terminator
+        // or checksum.)
+        let rom1a_data: [u8; 4096] = include!("rom1asyx.in");
+
+        // The checksum is 0x33
+        let rom1a_data_checksum = voice_checksum(&rom1a_data.to_vec());
+        assert_eq!(0x33, rom1a_data_checksum);
+        //println!("ROM1A data checksum = {:X}h", rom1a_data_checksum);
+    }
 
     #[test]
     fn test_eg_to_bytes() {
