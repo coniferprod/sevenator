@@ -106,7 +106,7 @@ fn make_brass1() -> Voice {
         kbd_level_scaling: KeyboardLevelScaling {
             breakpoint: 48 - 21, left_depth: 0, right_depth: 7,
             left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-            right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
+            right_curve: ScalingCurve { curve: CurveStyle::Exponential, positive: false },
         },
         kbd_rate_scaling: 0,
         amp_mod_sens: 0,
@@ -120,7 +120,7 @@ fn make_brass1() -> Voice {
 
     let op1 = Operator {
         eg: EnvelopeGenerator {
-            rate1: 72, rate2: 76, rate3: 99, rate4: 91,
+            rate1: 72, rate2: 76, rate3: 99, rate4: 71,
             level1: 99, level2: 88, level3: 96, level4: 0
         },
         kbd_level_scaling: KeyboardLevelScaling {
@@ -410,7 +410,7 @@ impl KeyboardLevelScaling {
             self.breakpoint,
             self.left_depth,
             self.right_depth,
-            self.right_curve.to_bytes() | (self.left_curve.to_bytes() << 2),
+            self.left_curve.to_bytes() | (self.right_curve.to_bytes() << 2),
         ]
     }
 }
@@ -784,11 +784,11 @@ mod tests {
         };
 
         let data = op.to_packed_bytes();
+        assert_eq!(data.len(), 17);
         assert_eq!(
             data,
             vec![49, 99, 28, 68, 98, 98, 91, 0, 39, 54, 50, 5, 60, 8, 82, 2, 0]
         );
-        assert_eq!(data.len(), 17);
     }
 
     #[test]
@@ -806,6 +806,27 @@ mod tests {
         assert_eq!(brass1.to_packed_bytes().len(), 128);
     }
 
+    // Finds the first offset where the two vectors differ.
+    // Returns None if no differences are found, or if the vectors
+    // are different lengths, Some<usize> with the offset otherwise.
+    fn first_different_offset(v1: &[u8], v2: &[u8]) -> Option<usize> {
+        if v1.len() != v2.len() {
+            return None;
+        }
+
+        let mut offset = 0;
+        for i in 0..v1.len() {
+            if v1[i] != v2[i] {
+                return Some(offset);
+            }
+            else {
+                offset += 1;
+            }
+        }
+
+        None
+    }
+
     #[test]
     fn test_voice_to_packed_bytes() {
         let rom1a_data: [u8; 4096] = include!("rom1asyx.in");
@@ -813,7 +834,15 @@ mod tests {
         // The first voice in ROM1A ("BRASS 1") is the first 128 bytes
         let voice_data = &rom1a_data[..128];
         let brass1 = make_brass1();
-        assert_eq!(brass1.to_packed_bytes(), voice_data);
+        let brass1_data = brass1.to_packed_bytes();
+
+        let diff_offset = first_different_offset(voice_data, &brass1_data);
+        match diff_offset {
+            Some(offset) => println!("Vectors differ at offset {:?}", offset),
+            None => println!("Vectors are the same")
+        }
+
+        assert_eq!(brass1_data, voice_data);
     }
 
     #[test]
