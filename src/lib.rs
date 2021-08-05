@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::prelude::*;
+use std::io::Cursor;
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -312,6 +313,19 @@ impl EnvelopeGenerator {
         }
     }
 
+    pub fn from_bytes(data: Vec<u8>) -> Self {
+        Self {
+            rate1: data[0],
+            rate2: data[1],
+            rate3: data[2],
+            rate4: data[3],
+            level1: data[4],
+            level2: data[5],
+            level3: data[6],
+            level4: data[7],
+        }
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
             self.rate1, self.rate2, self.rate3, self.rate4,
@@ -395,6 +409,28 @@ impl KeyboardLevelScaling {
         }
     }
 
+    pub fn from_bytes(data: Vec<u8>) -> Self {
+        Self {
+            breakpoint: data[0],
+            left_depth: data[1],
+            right_depth: data[2],
+            left_curve: match data[3] {
+                0 => ScalingCurve::lin_neg(),
+                1 => ScalingCurve::exp_neg(),
+                2 => ScalingCurve::exp_pos(),
+                3 => ScalingCurve::lin_pos(),
+                _ => ScalingCurve::lin_pos(),
+            },
+            right_curve: match data[3] {
+                0 => ScalingCurve::lin_neg(),
+                1 => ScalingCurve::exp_neg(),
+                2 => ScalingCurve::exp_pos(),
+                3 => ScalingCurve::lin_pos(),
+                _ => ScalingCurve::lin_pos(),
+            },
+        }
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
             self.breakpoint,
@@ -449,6 +485,28 @@ impl Operator {
             coarse: 1,
             fine: 0,  // TODO: voice init for fine is "1.00 for all operators", should this be 0 or 1?
             detune: 0,
+        }
+    }
+
+    pub fn from_bytes(data: Vec<u8>) -> Self {
+        let eg_bytes = &data[0..8];
+        let level_scaling_bytes = &data[8..13];
+        let mode = match data[18] {
+            0 => OperatorMode::Ratio,
+            1 => OperatorMode::Fixed,
+            _ => OperatorMode::Ratio
+        };
+        Self {
+            eg: EnvelopeGenerator::from_bytes(eg_bytes.to_vec()),
+            kbd_level_scaling: KeyboardLevelScaling::from_bytes(level_scaling_bytes.to_vec()),
+            kbd_rate_scaling: data[14],
+            amp_mod_sens: data[15],
+            key_vel_sens: data[16],
+            output_level: data[17],
+            mode: mode,
+            coarse: data[19],
+            fine: data[20],
+            detune: data[21] as i8,
         }
     }
 
