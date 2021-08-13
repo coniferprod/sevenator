@@ -327,7 +327,13 @@ fn make_brass1() -> Voice {
         alg: 22,
         feedback: 7,
         osc_sync: true,
-        lfo: Lfo { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LfoWaveform::Sine },
+        lfo: Lfo {
+            speed: RangedValue::from_int(RangeKind::Level, 37),
+            delay: RangedValue::new_min(RangeKind::Level),
+            pmd: RangedValue::from_int(RangeKind::Level, 5),
+            amd: RangedValue::new_min(RangeKind::Level),
+            sync: false, wave: LfoWaveform::Sine,
+        },
         pitch_mod_sens: 3,
         transpose: 24,
         name: "BRASS   1 ".to_string(),
@@ -388,10 +394,10 @@ fn make_init_voice() -> Voice {
         feedback: 0,
         osc_sync: true, // osc key sync = on
         lfo: Lfo {
-            speed: 35,
-            delay: 0,
-            pmd: 0,
-            amd: 0,
+            speed: RangedValue::from_int(RangeKind::Level, 35),
+            delay: RangedValue::new_min(RangeKind::Level),
+            pmd: RangedValue::new_min(RangeKind::Level),
+            amd: RangedValue::new_min(RangeKind::Level),
             sync: true,
             wave: LfoWaveform::Triangle,
         },
@@ -454,14 +460,7 @@ fn make_random_voice() -> Voice {
         alg: 1,
         feedback: 0,
         osc_sync: true, // osc key sync = on
-        lfo: Lfo {
-            speed: 35,
-            delay: 0,
-            pmd: 0,
-            amd: 0,
-            sync: true,
-            wave: LfoWaveform::Triangle,
-        },
+        lfo: Lfo::new_random(),
         pitch_mod_sens: 3,
         transpose: 24,
         name: "RNDM VOICE".to_string(),
@@ -601,6 +600,19 @@ impl EnvelopeGenerator {
             self.rate1.as_byte(), self.rate2.as_byte(), self.rate3.as_byte(), self.rate4.as_byte(),
             self.level1.as_byte(), self.level2.as_byte(), self.level3.as_byte(), self.level4.as_byte()
         ]
+    }
+
+    pub fn new_random() -> Self {
+        Self {
+            rate1: EnvelopeGenerator::new_random_rate(),
+            rate2: EnvelopeGenerator::new_random_rate(),
+            rate3: EnvelopeGenerator::new_random_rate(),
+            rate4: EnvelopeGenerator::new_random_rate(),
+            level1: EnvelopeGenerator::new_random_level(),
+            level2: EnvelopeGenerator::new_random_level(),
+            level3: EnvelopeGenerator::new_random_level(),
+            level4: EnvelopeGenerator::new_random_level(),
+        }
     }
 
     pub fn new_rate(value: i16) -> RangedValue {
@@ -867,10 +879,10 @@ enum LfoWaveform {
 
 #[derive(Debug, Clone)]
 struct Lfo {
-    speed: u8,  // 0 ~ 99
-    delay: u8,  // 0 ~ 99
-    pmd: u8,    // 0 ~ 99
-    amd: u8,    // 0 ~ 99
+    speed: RangedValue,  // 0 ~ 99
+    delay: RangedValue,  // 0 ~ 99
+    pmd: RangedValue,    // 0 ~ 99
+    amd: RangedValue,    // 0 ~ 99
     sync: bool,
     wave: LfoWaveform,
 }
@@ -879,10 +891,10 @@ impl Lfo {
     /// Makes a new LFO initialized with the DX7 voice defaults.
     pub fn new() -> Self {
         Self {
-            speed: 35,
-            delay: 0,
-            pmd: 0,
-            amd: 0,
+            speed: RangedValue::from_int(RangeKind::Level, 35),
+            delay: RangedValue::new_min(RangeKind::Level),
+            pmd: RangedValue::new_min(RangeKind::Level),
+            amd: RangedValue::new_min(RangeKind::Level),
             sync: true,
             wave: LfoWaveform::Triangle,
         }
@@ -890,10 +902,10 @@ impl Lfo {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
-            self.speed,
-            self.delay,
-            self.pmd,
-            self.amd,
+            self.speed.as_byte(),
+            self.delay.as_byte(),
+            self.pmd.as_byte(),
+            self.amd.as_byte(),
             if self.sync { 1 } else { 0 },
             self.wave as u8,
         ]
@@ -901,12 +913,24 @@ impl Lfo {
 
     pub fn to_packed_bytes(&self) -> Vec<u8> {
         vec![
-            self.speed,
-            self.delay,
-            self.pmd,
-            self.amd,
+            self.speed.as_byte(),
+            self.delay.as_byte(),
+            self.pmd.as_byte(),
+            self.amd.as_byte(),
             (if self.sync { 1 } else { 0 }) | ((self.wave as u8) << 1),
         ]
+    }
+
+    pub fn new_random() -> Self {
+        let level = RangedValue::new_min(RangeKind::Level);
+        Self {
+            speed: RangedValue::from_int(RangeKind::Level, level.random_value()),
+            delay: RangedValue::from_int(RangeKind::Level, level.random_value()),
+            pmd: RangedValue::from_int(RangeKind::Level, level.random_value()),
+            amd: RangedValue::from_int(RangeKind::Level, level.random_value()),
+            sync: true,
+            wave: LfoWaveform::Triangle,
+        }
     }
 }
 
