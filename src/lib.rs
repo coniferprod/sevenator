@@ -327,7 +327,7 @@ fn make_brass1() -> Voice {
         alg: 22,
         feedback: 7,
         osc_sync: true,
-        lfo: LFO { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LFOWaveform::Sine },
+        lfo: Lfo { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LfoWaveform::Sine },
         pitch_mod_sens: 3,
         transpose: 24,
         name: "BRASS   1 ".to_string(),
@@ -387,13 +387,13 @@ fn make_init_voice() -> Voice {
         alg: 1,
         feedback: 0,
         osc_sync: true, // osc key sync = on
-        lfo: LFO {
+        lfo: Lfo {
             speed: 35,
             delay: 0,
             pmd: 0,
             amd: 0,
             sync: true,
-            wave: LFOWaveform::Triangle,
+            wave: LfoWaveform::Triangle,
         },
         pitch_mod_sens: 3,
         transpose: 24,
@@ -454,13 +454,13 @@ fn make_random_voice() -> Voice {
         alg: 1,
         feedback: 0,
         osc_sync: true, // osc key sync = on
-        lfo: LFO {
+        lfo: Lfo {
             speed: 35,
             delay: 0,
             pmd: 0,
             amd: 0,
             sync: true,
-            wave: LFOWaveform::Triangle,
+            wave: LfoWaveform::Triangle,
         },
         pitch_mod_sens: 3,
         transpose: 24,
@@ -605,7 +605,6 @@ impl EnvelopeGenerator {
 
     pub fn new_rate(value: i16) -> RangedValue {
         let kind = RangeKind::Rate;
-        let range = RangedValue::make_range(kind);
         RangedValue::from_int(kind, value)
     }
 
@@ -616,7 +615,6 @@ impl EnvelopeGenerator {
 
     pub fn new_level(value: i16) -> RangedValue {
         let kind = RangeKind::Level;
-        let range = RangedValue::make_range(kind);
         RangedValue::from_int(kind, value)
     }
 
@@ -858,7 +856,7 @@ impl Operator {
 }
 
 #[derive(Debug, Copy, Clone)]
-enum LFOWaveform {
+enum LfoWaveform {
     Triangle,
     SawDown,
     SawUp,
@@ -868,16 +866,16 @@ enum LFOWaveform {
 }
 
 #[derive(Debug, Clone)]
-struct LFO {
+struct Lfo {
     speed: u8,  // 0 ~ 99
     delay: u8,  // 0 ~ 99
     pmd: u8,    // 0 ~ 99
     amd: u8,    // 0 ~ 99
     sync: bool,
-    wave: LFOWaveform,
+    wave: LfoWaveform,
 }
 
-impl LFO {
+impl Lfo {
     /// Makes a new LFO initialized with the DX7 voice defaults.
     pub fn new() -> Self {
         Self {
@@ -886,7 +884,7 @@ impl LFO {
             pmd: 0,
             amd: 0,
             sync: true,
-            wave: LFOWaveform::Triangle,
+            wave: LfoWaveform::Triangle,
         }
     }
 
@@ -924,7 +922,7 @@ struct Voice {
     alg: u8,  // 1...32
     feedback: u8,
     osc_sync: bool,
-    lfo: LFO,
+    lfo: Lfo,
     pitch_mod_sens: u8,
     transpose: u8,  // 12 = C2
     name: String,
@@ -951,7 +949,7 @@ impl Voice {
             alg: 1,
             feedback: 0,
             osc_sync: true,
-            lfo: LFO::new(),
+            lfo: Lfo::new(),
             pitch_mod_sens: 3,
             transpose: 24,
             name: "INIT VOICE".to_string(),
@@ -1166,7 +1164,7 @@ mod tests {
 
     #[test]
     fn test_lfo_to_packed_bytes() {
-        let lfo = LFO { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LFOWaveform::Sine };
+        let lfo = Lfo { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LfoWaveform::Sine };
         assert_eq!(
             lfo.to_packed_bytes(),
             vec![37, 0, 5, 0, 0b00001000]
@@ -1220,7 +1218,7 @@ mod tests {
 
     #[test]
     fn test_bulk_b116() {
-        let lfo = LFO { speed: 37, delay: 0, pmd: 5, amd: 0, sync: true, wave: LFOWaveform::Square };
+        let lfo = Lfo { speed: 37, delay: 0, pmd: 5, amd: 0, sync: true, wave: LfoWaveform::Square };
         let pitch_mod_sens = 3u8;  // 0b011
         let sync = true;
 
