@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
+use log::{info, warn, error, debug};
 
 fn make_brass1() -> Voice {
     let op6 = Operator {
@@ -232,14 +233,14 @@ pub fn run() -> std::io::Result<()> {
 
     for (index, voice) in cartridge.iter().enumerate() {
         let mut voice_data = voice.to_packed_bytes();
-        eprintln!("Voice #{} packed data length = {} bytes", index, voice_data.len());
+        debug!("Voice #{} packed data length = {} bytes", index, voice_data.len());
         cartridge_data.append(&mut voice_data);
     }
 
     // Compute the checksum before we add the SysEx header and terminator,
     // but don't add it yet -- only just before the terminator.
     let cartridge_checksum = voice_checksum(&cartridge_data);
-    eprintln!("cartridge checksum = {:02X}h", cartridge_checksum);
+    debug!("cartridge checksum = {:02X}h", cartridge_checksum);
 
     // Insert the System Exclusive header at the beginning of the vector:
     let header = vec![
@@ -250,7 +251,7 @@ pub fn run() -> std::io::Result<()> {
         0x20,   // byte count MSB
         0x00,   // byte count LSB
     ];
-    eprintln!("header length = {} bytes", header.len());
+    debug!("header length = {} bytes", header.len());
     // This may be a bit inefficient, but not too much.
     // The last byte of the header goes first to 0, then the others follow.
     for b in header.iter().rev() {
@@ -448,29 +449,29 @@ impl Operator {
         let mut data: Vec<u8> = Vec::new();
 
         let mut eg_data = self.eg.to_bytes(); // not packed!
-        println!("  EG: {} bytes, {:?}", eg_data.len(), eg_data);
+        debug!("  EG: {} bytes, {:?}", eg_data.len(), eg_data);
         data.append(&mut eg_data);
 
         let mut kls_data = self.kbd_level_scaling.to_packed_bytes();
-        println!("  KLS: {} bytes, {:?}", kls_data.len(), kls_data);
+        debug!("  KLS: {} bytes, {:?}", kls_data.len(), kls_data);
         data.append(&mut kls_data);
 
         let byte12 = self.kbd_rate_scaling | (self.detune << 3);
-        println!("  b12: {:#08b}", byte12);
+        debug!("  b12: {:#08b}", byte12);
         data.push(byte12);
 
         let byte13 = self.amp_mod_sens | (self.key_vel_sens << 2);
-        println!("  b13: {:#08b}", byte12);
+        debug!("  b13: {:#08b}", byte12);
         data.push(byte13);
 
-        println!("  OL:  {:#08b}", self.output_level);
+        debug!("  OL:  {:#08b}", self.output_level);
         data.push(self.output_level);
 
         let byte15 = self.mode as u8 | (self.coarse << 1);
-        println!("  b15: {:#08b}", byte15);
+        debug!("  b15: {:#08b}", byte15);
         data.push(byte15);
 
-        println!("  FF:  {:#08b}", self.fine);
+        debug!("  FF:  {:#08b}", self.fine);
         data.push(self.fine);
 
         data
@@ -611,43 +612,43 @@ impl Voice {
         let mut data: Vec<u8> = Vec::new();
 
         let mut op6_data = self.op6.to_packed_bytes();
-        println!("OP6: {} bytes, {:?}", op6_data.len(), op6_data);
+        debug!("OP6: {} bytes, {:?}", op6_data.len(), op6_data);
         data.append(&mut op6_data);
 
         let mut op5_data = self.op5.to_packed_bytes();
-        println!("OP5: {} bytes, {:?}", op5_data.len(), op5_data);
+        debug!("OP5: {} bytes, {:?}", op5_data.len(), op5_data);
         data.append(&mut op5_data);
 
         let mut op4_data = self.op4.to_packed_bytes();
-        println!("OP4: {} bytes, {:?}", op4_data.len(), op4_data);
+        debug!("OP4: {} bytes, {:?}", op4_data.len(), op4_data);
         data.append(&mut op4_data);
 
         let mut op3_data = self.op3.to_packed_bytes();
-        println!("OP3: {} bytes, {:?}", op3_data.len(), op3_data);
+        debug!("OP3: {} bytes, {:?}", op3_data.len(), op3_data);
         data.append(&mut op3_data);
 
         let mut op2_data = self.op2.to_packed_bytes();
-        println!("OP2: {} bytes, {:?}", op2_data.len(), op2_data);
+        debug!("OP2: {} bytes, {:?}", op2_data.len(), op2_data);
         data.append(&mut op2_data);
 
         let mut op1_data = self.op1.to_packed_bytes();
-        println!("OP1: {} bytes, {:?}", op1_data.len(), op1_data);
+        debug!("OP1: {} bytes, {:?}", op1_data.len(), op1_data);
         data.append(&mut op1_data);
 
         let mut peg_data = self.peg.to_bytes(); // not packed!
-        println!("PEG: {} bytes, {:?}", peg_data.len(), peg_data);
+        debug!("PEG: {} bytes, {:?}", peg_data.len(), peg_data);
         data.append(&mut peg_data);
 
         data.push(self.alg);
-        println!("ALG: {}", self.alg);
+        debug!("ALG: {}", self.alg);
 
         let byte111 = self.feedback | ((if self.osc_sync { 1 } else { 0 }) << 3);
         data.push(byte111);
-        println!("  b111: {:#08b}", byte111);
+        debug!("  b111: {:#08b}", byte111);
 
         let mut lfo_data = self.lfo.to_packed_bytes();
         *lfo_data.last_mut().unwrap() |= self.pitch_mod_sens << 5;
-        println!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);
+        debug!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);
         data.append(&mut lfo_data);
 
         //let (all_but_last, last) = lfo_data.split_at(lfo_data.len() - 1);
@@ -659,10 +660,10 @@ impl Voice {
         //data.push(last_byte);
 
         data.push(self.transpose);
-        println!("  TRNSP: {:#02X}", self.transpose);
+        debug!("  TRNSP: {:#02X}", self.transpose);
 
         let padded_name = format!("{:<10}", self.name);
-        println!("  NAME: '{}'", padded_name);
+        debug!("  NAME: '{}'", padded_name);
         data.append(&mut padded_name.into_bytes());
 
         data
@@ -683,7 +684,7 @@ mod tests {
         // The checksum is 0x33
         let rom1a_data_checksum = voice_checksum(&rom1a_data.to_vec());
         assert_eq!(0x33, rom1a_data_checksum);
-        //println!("ROM1A data checksum = {:X}h", rom1a_data_checksum);
+        //debug!("ROM1A data checksum = {:X}h", rom1a_data_checksum);
     }
 
     #[test]

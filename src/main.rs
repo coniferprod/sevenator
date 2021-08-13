@@ -1,5 +1,7 @@
-use sevenator::*;
+use std::io::Error;
 
-fn main() {
-    sevenator::run();
+fn main() -> Result<(), Error> {
+    env_logger::init();
+
+    sevenator::run()
 }
