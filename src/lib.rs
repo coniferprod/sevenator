@@ -7,10 +7,12 @@ use log::{info, warn, error, debug};
 use rand::Rng;
 use num;
 use bit::BitIndex;
-use arrayvec::ArrayVec;
 
+//
 // Helper types to keep the parameters in range and generate random values.
+//
 
+/// The kind of range represented by a ranged value type instance.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum RangeKind {
     OutputLevel,
@@ -21,14 +23,15 @@ pub enum RangeKind {
 }
 
 // Rust ranges are not Copy because reasons (see https://github.com/rust-lang/rfcs/issues/2848),
-// so let's use a wrapper:
+// so let's use a private wrapper type. Everything we use
+// fits in an i16, so that's why it's the base type of the range.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct RangeInclusiveWrapper {
     start: i16,
     end: i16,
 }
-// Everything fits in an i16, so that's why it's the base type.
 
+/// Wraps a value in a given range, representing some kind of synth parameter value.
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct RangedValue {
     kind: RangeKind,
@@ -46,6 +49,7 @@ impl Default for RangedValue {
     }
 }
 
+/// Easier to type alias for the range we use in the ranged value type.
 pub type IntRange = RangeInclusive<i16>;
 
 impl RangedValue {
@@ -153,6 +157,7 @@ impl RangedValue {
     }
 }
 
+// Makes a new voice based on the "BRASS1" settings in the DX7 manual.
 fn make_brass1() -> Voice {
     let op6 = Operator {
         eg: EnvelopeGenerator {
@@ -370,6 +375,8 @@ fn make_init_voice() -> Voice {
         detune: 0
     };
 
+    // Operators 2...6 are identical to operator 1 except they
+    // have their output level set to zero.
     let init_op_rest = Operator {
         output_level: RangedValue::new_min(RangeKind::OutputLevel),
         ..init_op1
@@ -410,10 +417,8 @@ fn make_init_voice() -> Voice {
     }
 }
 
+// Makes a random envelope generator.
 fn make_random_eg() -> EnvelopeGenerator {
-    let rate = EnvelopeGenerator::new_rate(0);
-    let level = EnvelopeGenerator::new_level(0);
-
     EnvelopeGenerator {
         rate1: EnvelopeGenerator::new_random_rate(),
         rate2: EnvelopeGenerator::new_random_rate(),
@@ -426,6 +431,7 @@ fn make_random_eg() -> EnvelopeGenerator {
     }
 }
 
+// Makes a random operator.
 fn make_random_operator() -> Operator {
     Operator {
         eg: make_random_eg(),
@@ -441,6 +447,7 @@ fn make_random_operator() -> Operator {
     }
 }
 
+// Makes a random voice.
 fn make_random_voice() -> Voice {
     Voice {
         op1: make_random_operator(),
@@ -472,14 +479,17 @@ fn make_random_voice() -> Voice {
 
 const VOICE_COUNT: usize = 32;
 
+// Makes a cartridge filled with init voices.
 fn make_init_cartridge() -> Vec<Voice> {
     vec![make_init_voice(); VOICE_COUNT]
 }
 
+// Makes a cartridge filled with random voices.
 fn make_random_cartridge() -> Vec<Voice> {
     vec![make_random_voice(); VOICE_COUNT]
 }
 
+/// Runs the cartridge generation routine.
 pub fn run() -> std::io::Result<()> {
     // Get the default voice with `Voice::new()`.
     // The `make_init_voice()` function makes exactly the original init voice.
@@ -537,16 +547,17 @@ pub fn run() -> std::io::Result<()> {
     Ok(())
 }
 
+/// Envelope generator.
 #[derive(Debug, Clone, Copy)]
-struct EnvelopeGenerator {
-    rate1: RangedValue,
-    rate2: RangedValue,
-    rate3: RangedValue,
-    rate4: RangedValue,
-    level1: RangedValue,
-    level2: RangedValue,
-    level3: RangedValue,
-    level4: RangedValue,
+pub struct EnvelopeGenerator {
+    pub rate1: RangedValue,
+    pub rate2: RangedValue,
+    pub rate3: RangedValue,
+    pub rate4: RangedValue,
+    pub level1: RangedValue,
+    pub level2: RangedValue,
+    pub level3: RangedValue,
+    pub level4: RangedValue,
 }
 
 impl EnvelopeGenerator {
@@ -571,6 +582,7 @@ impl EnvelopeGenerator {
     With these settings, then R1 becomes Attack time, R3 is Decay
     time, L3 is Sustain level, and R4 is Release time."
     */
+    /// Makes a new ADSR-style envelope.
     pub fn adsr(attack: u8, decay: u8, sustain: u8, release: u8) -> Self {
         Self {
             rate1: RangedValue::from_byte(RangeKind::Rate, attack),
@@ -584,6 +596,7 @@ impl EnvelopeGenerator {
         }
     }
 
+    /// Makes an envelope generator from relevant SysEx message bytes.
     pub fn from_bytes(data: Vec<u8>) -> Self {
         Self {
             rate1: RangedValue::from_byte(RangeKind::Rate, data[0]),
@@ -597,6 +610,7 @@ impl EnvelopeGenerator {
         }
     }
 
+    /// Gets the SysEx bytes of this EG.
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
             self.rate1.as_byte(), self.rate2.as_byte(), self.rate3.as_byte(), self.rate4.as_byte(),
@@ -604,6 +618,7 @@ impl EnvelopeGenerator {
         ]
     }
 
+    /// Makes a new EG with random rates and levels.
     pub fn new_random() -> Self {
         Self {
             rate1: EnvelopeGenerator::new_random_rate(),
@@ -617,21 +632,25 @@ impl EnvelopeGenerator {
         }
     }
 
+    /// Makes a new EG rate from the given value.
     pub fn new_rate(value: i16) -> RangedValue {
         let kind = RangeKind::Rate;
         RangedValue::from_int(kind, value)
     }
 
+    /// Makes a new EG rate with a random value.
     pub fn new_random_rate() -> RangedValue {
         let rate = EnvelopeGenerator::new_rate(0);
         RangedValue::from_int(RangeKind::Rate, rate.random_value())
     }
 
+    /// Makes a new EG level from the given value.
     pub fn new_level(value: i16) -> RangedValue {
         let kind = RangeKind::Level;
         RangedValue::from_int(kind, value)
     }
 
+    /// Makes a new EG level with a random value.
     pub fn new_random_level() -> RangedValue {
         let level = EnvelopeGenerator::new_level(0);
         RangedValue::from_int(RangeKind::Level, level.random_value())
@@ -639,7 +658,6 @@ impl EnvelopeGenerator {
 }
 
 impl fmt::Display for EnvelopeGenerator {
-    // The display trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "R1={} L1={} R2={} L2={} R3={} L3={} R4={} L4={}",
             self.rate1.get(), self.level1.get(), self.rate2.get(), self.level2.get(),
@@ -647,35 +665,42 @@ impl fmt::Display for EnvelopeGenerator {
     }
 }
 
+/// Scaling curve style.
 #[derive(Debug, Copy, Clone)]
-enum CurveStyle {
+pub enum CurveStyle {
     Linear,
     Exponential
 }
 
+/// Scaling curve settings.
 #[derive(Debug, Clone, Copy)]
-struct ScalingCurve {
-    curve: CurveStyle,
-    positive: bool,  // true if positive, false if negative
+pub struct ScalingCurve {
+    pub curve: CurveStyle,
+    pub positive: bool,  // true if positive, false if negative
 }
 
 impl ScalingCurve {
+    /// Makes a linear positive scaling curve.
     pub fn lin_pos() -> Self {
         ScalingCurve { curve: CurveStyle::Linear, positive: true }
     }
 
+    /// Makes a linear negative scaling curve.
     pub fn lin_neg() -> Self {
         ScalingCurve { curve: CurveStyle::Linear, positive: false }
     }
 
+    /// Makes an exponential positive scaling curve.
     pub fn exp_pos() -> Self {
         ScalingCurve { curve: CurveStyle::Exponential, positive: true }
     }
 
+    /// Makes an exponential negative scaling curve.
     pub fn exp_neg() -> Self {
         ScalingCurve { curve: CurveStyle::Exponential, positive: false }
     }
 
+    /// Gets the SysEx bytes for this scaling curve.
     pub fn to_bytes(&self) -> u8 {
         match self {
             ScalingCurve { curve: CurveStyle::Linear, positive: true } => 3,
@@ -686,13 +711,14 @@ impl ScalingCurve {
     }
 }
 
+/// Keyboard level scaling.
 #[derive(Debug, Clone, Copy)]
-struct KeyboardLevelScaling {
-    breakpoint: u8, // 0 ~ 99 (A-1 ~ C8)
-    left_depth: u8,
-    right_depth: u8,
-    left_curve: ScalingCurve,  // 0 ~ 3
-    right_curve: ScalingCurve, // 0 ~ 3
+pub struct KeyboardLevelScaling {
+    pub breakpoint: u8, // 0 ~ 99 (A-1 ~ C8)
+    pub left_depth: u8,
+    pub right_depth: u8,
+    pub left_curve: ScalingCurve,  // 0 ~ 3
+    pub right_curve: ScalingCurve, // 0 ~ 3
 }
 
 /*
@@ -713,6 +739,7 @@ impl KeyboardLevelScaling {
         }
     }
 
+    /// Makes new keyboard level scaling settings from SysEx bytes.
     pub fn from_bytes(data: Vec<u8>) -> Self {
         Self {
             breakpoint: data[0],
@@ -735,6 +762,7 @@ impl KeyboardLevelScaling {
         }
     }
 
+    /// Gets the SysEx bytes representing this set of parameters.
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
             self.breakpoint,
@@ -745,6 +773,7 @@ impl KeyboardLevelScaling {
         ]
     }
 
+    /// Gets the packed SysEx bytes representing this set of parameters.
     pub fn to_packed_bytes(&self) -> Vec<u8> {
         vec![
             self.breakpoint,
@@ -755,24 +784,26 @@ impl KeyboardLevelScaling {
     }
 }
 
+/// Operator mode.
 #[derive(Debug, Copy, Clone)]
-enum OperatorMode {
+pub enum OperatorMode {
     Ratio,
     Fixed,
 }
 
+/// Operator.
 #[derive(Debug, Clone)]
-struct Operator {
-    eg: EnvelopeGenerator,
-    kbd_level_scaling: KeyboardLevelScaling,
-    kbd_rate_scaling: u8, // 0 ~ 7
-    amp_mod_sens: u8,  // 0 ~ 3
-    key_vel_sens: u8,  // 0 ~ 7
-    output_level: RangedValue,
-    mode: OperatorMode,
-    coarse: RangedValue,  // 0 ~ 31
-    fine: RangedValue,  // 0 ~ 99
-    detune: i8,   // -7 ~ 7
+pub struct Operator {
+    pub eg: EnvelopeGenerator,
+    pub kbd_level_scaling: KeyboardLevelScaling,
+    pub kbd_rate_scaling: u8, // 0 ~ 7
+    pub amp_mod_sens: u8,  // 0 ~ 3
+    pub key_vel_sens: u8,  // 0 ~ 7
+    pub output_level: RangedValue,
+    pub mode: OperatorMode,
+    pub coarse: RangedValue,  // 0 ~ 31
+    pub fine: RangedValue,  // 0 ~ 99
+    pub detune: i8,   // -7 ~ 7
 }
 
 impl Operator {
@@ -792,6 +823,7 @@ impl Operator {
         }
     }
 
+    /// Makes a new operator from SysEx bytes.
     pub fn from_bytes(data: Vec<u8>) -> Self {
         let eg_bytes = &data[0..8];
         let level_scaling_bytes = &data[8..13];
@@ -814,6 +846,7 @@ impl Operator {
         }
     }
 
+    /// Gets the SysEx bytes representing the operator.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
         data.append(&mut self.eg.to_bytes());
@@ -830,6 +863,7 @@ impl Operator {
         data
     }
 
+    /// Gets the packed SysEx bytes representing the operator.
     pub fn to_packed_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
 
@@ -866,15 +900,17 @@ impl Operator {
         data
     }
 
+    /// Makes a new random output level.
     pub fn new_random_output_level() -> RangedValue {
         let output_level = RangedValue::new_min(RangeKind::OutputLevel);
         RangedValue::from_int(RangeKind::OutputLevel, output_level.random_value())
     }
 }
 
+/// LFO waveform.
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
-enum LfoWaveform {
+pub enum LfoWaveform {
     Triangle,
     SawDown,
     SawUp,
@@ -883,14 +919,15 @@ enum LfoWaveform {
     SampleAndHold,
 }
 
+/// LFO.
 #[derive(Debug, Clone)]
-struct Lfo {
-    speed: RangedValue,  // 0 ~ 99
-    delay: RangedValue,  // 0 ~ 99
-    pmd: RangedValue,    // 0 ~ 99
-    amd: RangedValue,    // 0 ~ 99
-    sync: bool,
-    wave: LfoWaveform,
+pub struct Lfo {
+    pub speed: RangedValue,  // 0 ~ 99
+    pub delay: RangedValue,  // 0 ~ 99
+    pub pmd: RangedValue,    // 0 ~ 99
+    pub amd: RangedValue,    // 0 ~ 99
+    pub sync: bool,
+    pub wave: LfoWaveform,
 }
 
 impl Lfo {
@@ -906,6 +943,7 @@ impl Lfo {
         }
     }
 
+    /// Gets the SysEx bytes representing this LFO.
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
             self.speed.as_byte(),
@@ -917,6 +955,7 @@ impl Lfo {
         ]
     }
 
+    /// Gets the packed SysEx bytes representing this LFO.
     pub fn to_packed_bytes(&self) -> Vec<u8> {
         vec![
             self.speed.as_byte(),
@@ -927,6 +966,7 @@ impl Lfo {
         ]
     }
 
+    /// Makes a new LFO with random settings.
     pub fn new_random() -> Self {
         let level = RangedValue::new_min(RangeKind::Level);
         Self {
@@ -940,23 +980,24 @@ impl Lfo {
     }
 }
 
+/// Voice.
 #[derive(Debug, Clone)]
-struct Voice {
-    op1: Operator,
-    op2: Operator,
-    op3: Operator,
-    op4: Operator,
-    op5: Operator,
-    op6: Operator,
-    peg: EnvelopeGenerator,  // pitch env
-    alg: u8,  // 1...32
-    feedback: u8,
-    osc_sync: bool,
-    lfo: Lfo,
-    pitch_mod_sens: u8,
-    transpose: u8,  // +/- 2 octaves (12 = C2  (value is 0~48 in SysEx))
-    name: String,
-    op_flags: [bool; 6],
+pub struct Voice {
+    pub op1: Operator,
+    pub op2: Operator,
+    pub op3: Operator,
+    pub op4: Operator,
+    pub op5: Operator,
+    pub op6: Operator,
+    pub peg: EnvelopeGenerator,  // pitch env
+    pub alg: u8,  // 1...32
+    pub feedback: u8,
+    pub osc_sync: bool,
+    pub lfo: Lfo,
+    pub pitch_mod_sens: u8,
+    pub transpose: u8,  // +/- 2 octaves (12 = C2  (value is 0~48 in SysEx))
+    pub name: String,
+    pub op_flags: [bool; 6],
 }
 
 impl Voice {
@@ -987,6 +1028,7 @@ impl Voice {
         }
     }
 
+    /// Gets the SysEx bytes representing this voice.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
         data.append(&mut self.op6.to_bytes());
@@ -1021,6 +1063,7 @@ impl Voice {
         data
     }
 
+    /// Gets the packed SysEx bytes representing this voice.
     pub fn to_packed_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
 
@@ -1079,16 +1122,6 @@ impl Voice {
         data
     }
 }
-
-/*
-impl fmt::Display for Voice {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "R1={} L1={} R2={} L2={} R3={} L3={} R4={} L4={}",
-            self.rate1.get(), self.level1.get(), self.rate2.get(), self.level2.get(),
-            self.rate3.get(), self.level3.get(), self.rate4.get(), self.level4.get())
-    }
-}
-*/
 
 #[cfg(test)]
 mod tests {

@@ -25,7 +25,7 @@ package, so that Sevenator will become just one client of the API.
 ## The Yamaha DX7 patch format
 
 The Yamaha DX7 patch format is well documented in the DX7 Owner's Manual,
-available online in the Yamaha Manual Library. A description of he packed format
+available online in the Yamaha Manual Library. A description of the packed format
 can be found in the [Dexed documentation](https://github.com/asb2m10/dexed/blob/master/Documentation/sysex-format.txt).
 
 The Yamaha DX7 cartridge data is 4,096 bytes long (not counting the System
