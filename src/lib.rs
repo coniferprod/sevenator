@@ -6,6 +6,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use log::{info, warn, error, debug};
 use rand::Rng;
 use num;
+use bit::BitIndex;
+use arrayvec::ArrayVec;
 
 // Helper types to keep the parameters in range and generate random values.
 
@@ -226,7 +228,7 @@ fn make_brass1() -> Voice {
         mode: OperatorMode::Ratio,
         coarse: RangedValue::from_int(RangeKind::Coarse, 1),
         fine: RangedValue::from_int(RangeKind::Fine, 0),
-        detune: 0
+        detune: 0,
     };
 
     let op3 = Operator {
@@ -252,7 +254,7 @@ fn make_brass1() -> Voice {
         mode: OperatorMode::Ratio,
         coarse: RangedValue::from_int(RangeKind::Coarse, 1),
         fine: RangedValue::from_int(RangeKind::Fine, 0),
-        detune: -2
+        detune: -2,
     };
 
     let op2 = Operator {
@@ -277,8 +279,8 @@ fn make_brass1() -> Voice {
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 86),
         mode: OperatorMode::Ratio,
         coarse: RangedValue::from_int(RangeKind::Coarse, 0),
-        fine: RangedValue::from_int(RangeKind::Fine, 50),
-        detune: 7
+        fine: RangedValue::from_int(RangeKind::Fine, 0),  // this was 50 in the DX7 manual
+        detune: 7,
     };
 
     let op1 = Operator {
@@ -303,8 +305,8 @@ fn make_brass1() -> Voice {
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 98),
         mode: OperatorMode::Ratio,
         coarse: RangedValue::from_int(RangeKind::Coarse, 0),
-        fine: RangedValue::from_int(RangeKind::Fine, 50),
-        detune: 7
+        fine: RangedValue::from_int(RangeKind::Fine, 0),
+        detune: 7,
     };
 
     Voice {
@@ -824,6 +826,7 @@ impl Operator {
         data.push(self.coarse.as_byte());
         data.push(self.fine.as_byte());
         data.push((self.detune + 7) as u8); // 0 = detune -7
+        assert_eq!(data.len(), 21);
         data
     }
 
@@ -858,6 +861,8 @@ impl Operator {
         debug!("  FF:  {:#08b}", fine);
         data.push(self.fine.as_byte());
 
+        assert_eq!(data.len(), 17);
+
         data
     }
 
@@ -868,6 +873,7 @@ impl Operator {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[repr(u8)]
 enum LfoWaveform {
     Triangle,
     SawDown,
@@ -948,7 +954,7 @@ struct Voice {
     osc_sync: bool,
     lfo: Lfo,
     pitch_mod_sens: u8,
-    transpose: u8,  // 12 = C2
+    transpose: u8,  // +/- 2 octaves (12 = C2  (value is 0~48 in SysEx))
     name: String,
     op_flags: [bool; 6],
 }
@@ -1046,15 +1052,18 @@ impl Voice {
         debug!("PEG: {} bytes, {:?}", peg_data.len(), peg_data);
         data.append(&mut peg_data);
 
-        data.push(self.alg);
+        data.push(self.alg - 1);  // bring alg to range 0...31
         debug!("ALG: {}", self.alg);
 
         let byte111 = self.feedback | ((if self.osc_sync { 1 } else { 0 }) << 3);
         data.push(byte111);
         debug!("  b111: {:#08b}", byte111);
 
+        // Inject the pitch mod sensitivity value to the last LFO byte
         let mut lfo_data = self.lfo.to_packed_bytes();
-        *lfo_data.last_mut().unwrap() |= self.pitch_mod_sens << 5;
+        let lfo_data_length = lfo_data.len();
+        lfo_data[lfo_data_length - 1].set_bit_range(4..7, self.pitch_mod_sens);
+
         debug!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);
         data.append(&mut lfo_data);
 
@@ -1064,6 +1073,8 @@ impl Voice {
         let padded_name = format!("{:<10}", self.name);
         debug!("  NAME: '{}'", padded_name);
         data.append(&mut padded_name.into_bytes());
+
+        assert_eq!(data.len(), 128);
 
         data
     }
@@ -1180,15 +1191,32 @@ mod tests {
 
         let data = op.to_packed_bytes();
         assert_eq!(data.len(), 17);
-        assert_eq!(
-            data,
-            vec![49, 99, 28, 68, 98, 98, 91, 0, 39, 54, 50, 5, 60, 8, 82, 2, 0]
-        );
+
+        let expected_data = vec![0x31u8, 0x63, 0x1c, 0x44, 0x62, 0x62, 0x5b, 0x00, 0x27, 0x36, 0x32, 0x05, 0x3c, 0x08, 0x52, 0x02, 0x00];
+
+        let diff_offset = first_different_offset(&expected_data, &data);
+        match diff_offset {
+            Some(offset) => {
+                println!("Vectors differ at offset {:?}", offset);
+                println!("Expected = {}, actual = {}", expected_data[offset], data[offset]);
+            },
+            None => println!("Vectors are the same")
+        }
+
+        assert_eq!(data, expected_data);
     }
 
     #[test]
     fn test_lfo_to_packed_bytes() {
-        let lfo = Lfo { speed: 37, delay: 0, pmd: 5, amd: 0, sync: false, wave: LfoWaveform::Sine };
+        let lfo = Lfo {
+            speed: RangedValue::from_int(RangeKind::Level, 37),
+            delay: RangedValue::new_min(RangeKind::Level),
+            pmd: RangedValue::from_int(RangeKind::Level, 5),
+            amd: RangedValue::new_min(RangeKind::Level),
+            sync: false,
+            wave: LfoWaveform::Sine,
+        };
+
         assert_eq!(
             lfo.to_packed_bytes(),
             vec![37, 0, 5, 0, 0b00001000]
@@ -1233,7 +1261,10 @@ mod tests {
 
         let diff_offset = first_different_offset(voice_data, &brass1_data);
         match diff_offset {
-            Some(offset) => println!("Vectors differ at offset {:?}", offset),
+            Some(offset) => {
+                println!("Vectors differ at offset {:?}", offset);
+                println!("Expected = {}, actual = {}", voice_data[offset], brass1_data[offset]);
+            },
             None => println!("Vectors are the same")
         }
 
@@ -1242,7 +1273,15 @@ mod tests {
 
     #[test]
     fn test_bulk_b116() {
-        let lfo = Lfo { speed: 37, delay: 0, pmd: 5, amd: 0, sync: true, wave: LfoWaveform::Square };
+        let lfo = Lfo {
+            speed: RangedValue::from_int(RangeKind::Level, 37),
+            delay: RangedValue::new_min(RangeKind::Level),
+            pmd: RangedValue::from_int(RangeKind::Level, 5),
+            amd: RangedValue::new_min(RangeKind::Level),
+            sync: true,
+            wave: LfoWaveform::Square,
+        };
+
         let pitch_mod_sens = 3u8;  // 0b011
         let sync = true;
 
