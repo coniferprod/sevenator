@@ -25,6 +25,7 @@ pub enum RangeKind {
     Coarse,
     Fine,
     Algorithm,
+    Detune,
 }
 
 // Rust ranges are not Copy because reasons (see https://github.com/rust-lang/rfcs/issues/2848),
@@ -68,6 +69,7 @@ impl RangedValue {
             RangeKind::Coarse => RangeInclusiveWrapper { start: 0, end: 31 },
             RangeKind::Fine => RangeInclusiveWrapper { start: 0, end: 99 },
             RangeKind::Algorithm => RangeInclusiveWrapper { start: 1, end: 32 },
+            RangeKind::Detune => RangeInclusiveWrapper { start: -7, end: 7 },
         }
     }
 
@@ -77,7 +79,7 @@ impl RangedValue {
 
         // If this were a regular RangeInclusive, these would be calls to start() and end():
         let value = if range.start < 0 {  // need to adjust value
-            initial_value as i16 - (range.end + 1) as i16
+            initial_value as i16 - range.start as i16
         }
         else {
             initial_value as i16
@@ -141,7 +143,7 @@ impl RangedValue {
     /// Gets the value as a byte.
     pub fn as_byte(&self) -> u8 {
         if self.range.start < 0 {
-            (self.value + self.range.end + 1) as u8
+            (self.value + self.range.end) as u8
         }
         else {
             self.value as u8
@@ -215,7 +217,7 @@ fn make_brass1() -> Voice {
         },
         kbd_level_scaling,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 98),
-        detune: 1,
+        detune: RangedValue::from_int(RangeKind::Detune, 1),
         ..op
     };
 
@@ -239,7 +241,7 @@ fn make_brass1() -> Voice {
         },
         kbd_level_scaling,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 99),
-        detune: -2,
+        detune: RangedValue::from_int(RangeKind::Detune, -2),
         ..op
     };
 
@@ -264,7 +266,7 @@ fn make_brass1() -> Voice {
         key_vel_sens: 0,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 86),
         coarse: RangedValue::from_int(RangeKind::Coarse, 0),
-        detune: 7,
+        detune: RangedValue::new_max(RangeKind::Detune),
         ..op
     };
 
@@ -286,7 +288,7 @@ fn make_brass1() -> Voice {
         key_vel_sens: 0,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 98),
         coarse: RangedValue::from_int(RangeKind::Coarse, 0),
-        detune: 7,
+        detune: RangedValue::new_max(RangeKind::Detune),
         ..op
     };
 
@@ -343,7 +345,7 @@ fn make_init_voice() -> Voice {
         mode: OperatorMode::Ratio,
         coarse: RangedValue::from_int(RangeKind::Coarse, 1),
         fine: RangedValue::from_int(RangeKind::Fine, 0),
-        detune: 0
+        detune: RangedValue::from_int(RangeKind::Detune, 0),
     };
 
     // Operators 2...6 are identical to operator 1 except they
@@ -414,7 +416,7 @@ fn make_random_operator() -> Operator {
         mode: OperatorMode::Ratio,
         coarse: RangedValue::from_int(RangeKind::Coarse, 1),
         fine: RangedValue::from_int(RangeKind::Fine, 0),
-        detune: 0
+        detune: RangedValue::from_int(RangeKind::Detune, 0),
     }
 }
 
@@ -786,7 +788,7 @@ pub struct Operator {
     pub mode: OperatorMode,
     pub coarse: RangedValue,  // 0 ~ 31
     pub fine: RangedValue,  // 0 ~ 99
-    pub detune: i8,   // -7 ~ 7
+    pub detune: RangedValue,   // -7 ~ 7
 }
 
 impl Operator {
@@ -802,7 +804,7 @@ impl Operator {
             mode: OperatorMode::Ratio,
             coarse: RangedValue::from_int(RangeKind::Coarse, 1),
             fine: RangedValue::from_int(RangeKind::Fine, 0),  // TODO: voice init for fine is "1.00 for all operators", should this be 0 or 1?
-            detune: 0,
+            detune: RangedValue::from_int(RangeKind::Detune, 0),
         }
     }
 
@@ -833,7 +835,7 @@ impl SystemExclusiveData for Operator {
             mode,
             coarse: RangedValue::from_byte(RangeKind::Coarse, data[19]),
             fine: RangedValue::from_byte(RangeKind::Fine, data[20]),
-            detune: data[21] as i8,
+            detune: RangedValue::from_byte(RangeKind::Detune, data[21]),
         }
     }
 
@@ -849,7 +851,7 @@ impl SystemExclusiveData for Operator {
         data.push(self.mode as u8);
         data.push(self.coarse.as_byte());
         data.push(self.fine.as_byte());
-        data.push((self.detune + 7) as u8); // 0 = detune -7
+        data.push(self.detune.as_byte()); // 0 = detune -7
         assert_eq!(data.len(), 21);
         data
     }
@@ -866,7 +868,8 @@ impl SystemExclusiveData for Operator {
         debug!("  KLS: {} bytes, {:?}", kls_data.len(), kls_data);
         data.extend(kls_data);
 
-        let byte12 = self.kbd_rate_scaling | (((self.detune + 7) as u8) << 3);
+        let detune = self.detune.as_byte();
+        let byte12 = self.kbd_rate_scaling | (detune << 3);
         debug!("  KBD RATE SCALING = {:?} DETUNE = {:?} b12: {:#08b}", self.kbd_rate_scaling, self.detune, byte12);
         data.push(byte12);
 
@@ -1205,7 +1208,7 @@ mod tests {
             mode: OperatorMode::Ratio,
             coarse: RangedValue::from_int(RangeKind::Coarse, 1),
             fine: RangedValue::from_int(RangeKind::Fine, 0),
-            detune: 0
+            detune: RangedValue::from_int(RangeKind::Detune, 0),
         };
 
         let data = op.to_packed_bytes();
@@ -1371,6 +1374,15 @@ mod tests {
         let level = RangedValue::from_int(RangeKind::OutputLevel, 16);
         assert_eq!(level.range().start(), &0);
         assert_eq!(level.range().end(), &99);
+    }
+
+    #[test]
+    fn test_ranged_value_negative_range() {
+        let neg_detune = RangedValue::from_int(RangeKind::Detune, -7);
+        assert_eq!(neg_detune.as_byte(), 0u8);
+
+        let pos_detune = RangedValue::from_int(RangeKind::Detune, 7);
+        assert_eq!(pos_detune.as_byte(), 14u8);
     }
 
     #[test]
