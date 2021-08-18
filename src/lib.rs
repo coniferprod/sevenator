@@ -326,18 +326,9 @@ fn make_brass1() -> Voice {
 fn make_init_voice() -> Voice {
     let init_eg = EnvelopeGenerator::new();
 
-    // Break point = A-1 for all operators
-    // Curve = -LIN for both curves, all operators
-    // Depth = 0 for both curves, all operators
-    let init_kbd_level_scaling = KeyboardLevelScaling {
-        breakpoint: 0, left_depth: 0, right_depth: 0,
-        left_curve: ScalingCurve::lin_neg(),
-        right_curve: ScalingCurve::lin_neg(),
-    };
-
     let init_op1 = Operator {
         eg: init_eg.clone(),
-        kbd_level_scaling: init_kbd_level_scaling.clone(),
+        kbd_level_scaling: KeyboardLevelScaling::new(),
         kbd_rate_scaling: 0,
         amp_mod_sens: 0,
         key_vel_sens: 0,
@@ -528,6 +519,10 @@ pub trait SystemExclusiveData {
     fn data_size(&self) -> usize { 0 }
 }
 
+// Conveniences for initializing EGs.
+pub struct Rates(i16, i16, i16, i16);
+pub struct Levels(i16, i16, i16, i16);
+
 /// Envelope generator.
 #[derive(Debug, Clone, Copy)]
 pub struct EnvelopeGenerator {
@@ -544,15 +539,20 @@ pub struct EnvelopeGenerator {
 impl EnvelopeGenerator {
     /// Creates a new EG with the DX7 voice defaults.
     pub fn new() -> Self {
+        EnvelopeGenerator::new_rate_level(Rates(99, 99, 99, 99), Levels(99, 99, 99, 0))
+    }
+
+    /// Makes a new EG with rates and levels.
+    pub fn new_rate_level(rates: Rates, levels: Levels) -> Self {
         Self {
-            rate1: EnvelopeGenerator::new_rate(99),
-            rate2: EnvelopeGenerator::new_rate(99),
-            rate3: EnvelopeGenerator::new_rate(99),
-            rate4: EnvelopeGenerator::new_rate(99),
-            level1: EnvelopeGenerator::new_level(99),
-            level2: EnvelopeGenerator::new_level(99),
-            level3: EnvelopeGenerator::new_level(99),
-            level4: EnvelopeGenerator::new_level(0),
+            rate1: RangedValue::from_int(RangeKind::Level, rates.0),
+            rate2: RangedValue::from_int(RangeKind::Level, rates.1),
+            rate3: RangedValue::from_int(RangeKind::Level, rates.2),
+            rate4: RangedValue::from_int(RangeKind::Level, rates.3),
+            level1: RangedValue::from_int(RangeKind::Level, levels.0),
+            level2: RangedValue::from_int(RangeKind::Level, levels.1),
+            level3: RangedValue::from_int(RangeKind::Level, levels.2),
+            level4: RangedValue::from_int(RangeKind::Level, levels.3),
         }
     }
 
@@ -564,17 +564,11 @@ impl EnvelopeGenerator {
     time, L3 is Sustain level, and R4 is Release time."
     */
     /// Makes a new ADSR-style envelope.
-    pub fn adsr(attack: Byte, decay: Byte, sustain: Byte, release: Byte) -> Self {
-        Self {
-            rate1: RangedValue::from_byte(RangeKind::Rate, attack),
-            rate2: RangedValue::new_max(RangeKind::Rate),
-            rate3: RangedValue::from_byte(RangeKind::Rate, decay),
-            rate4: RangedValue::from_byte(RangeKind::Rate, release),
-            level1: RangedValue::new_max(RangeKind::Level),
-            level2: RangedValue::new_max(RangeKind::Level),
-            level3: RangedValue::from_byte(RangeKind::Level, sustain),
-            level4: RangedValue::new_min(RangeKind::Level),
-        }
+    pub fn adsr(attack: i16, decay: i16, sustain: i16, release: i16) -> Self {
+        EnvelopeGenerator::new_rate_level(
+            Rates(attack, 99, decay, release),
+            Levels(99, 99, sustain, 0)
+        )
     }
 
     /// Makes a new EG with random rates and levels.
@@ -627,16 +621,10 @@ impl fmt::Display for EnvelopeGenerator {
 impl SystemExclusiveData for EnvelopeGenerator {
     /// Makes an envelope generator from relevant SysEx message bytes.
     fn from_bytes(data: ByteVector) -> Self {
-        Self {
-            rate1: RangedValue::from_byte(RangeKind::Rate, data[0]),
-            rate2: RangedValue::from_byte(RangeKind::Rate, data[1]),
-            rate3: RangedValue::from_byte(RangeKind::Rate, data[2]),
-            rate4: RangedValue::from_byte(RangeKind::Rate, data[3]),
-            level1: RangedValue::from_byte(RangeKind::Rate, data[4]),
-            level2: RangedValue::from_byte(RangeKind::Rate, data[5]),
-            level3: RangedValue::from_byte(RangeKind::Rate, data[6]),
-            level4: RangedValue::from_byte(RangeKind::Rate, data[7]),
-        }
+        EnvelopeGenerator::new_rate_level(
+            Rates(data[0] as i16, data[1] as i16, data[2] as i16, data[3] as i16),
+            Levels(data[4] as i16, data[5] as i16, data[6] as i16, data[7] as i16)
+        )
     }
 
     /// Gets the SysEx bytes of this EG.
