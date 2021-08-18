@@ -159,6 +159,20 @@ impl RangedValue {
 
 // Makes a new voice based on the "BRASS1" settings in the DX7 manual.
 fn make_brass1() -> Voice {
+    let kbd_level_scaling = KeyboardLevelScaling {
+        breakpoint: 60 - 21,
+        left_depth: 0,
+        right_depth: 0,
+        left_curve: ScalingCurve::lin_pos(),
+        right_curve: ScalingCurve::lin_pos(),
+    };
+
+    // Make one operator and then specify the differences to the others.
+    let op = Operator {
+        key_vel_sens: 2,
+        ..Operator::new()
+    };
+
     let op6 = Operator {
         eg: EnvelopeGenerator {
             rate1: EnvelopeGenerator::new_rate(49),
@@ -171,26 +185,15 @@ fn make_brass1() -> Voice {
             level4: EnvelopeGenerator::new_level(0),
         },
         kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60 - 21,
             left_depth: 54,
             right_depth: 50,
-            left_curve: ScalingCurve {
-                curve: CurveStyle::Exponential,
-                positive: false
-            },
-            right_curve: ScalingCurve {
-                curve: CurveStyle::Exponential,
-                positive: false
-            },
+            left_curve: ScalingCurve::exp_neg(),
+            right_curve: ScalingCurve::exp_neg(),
+            ..kbd_level_scaling
         },
         kbd_rate_scaling: 4,
-        amp_mod_sens: 0,
-        key_vel_sens: 2,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 82),
-        mode: OperatorMode::Ratio,
-        coarse: RangedValue::from_int(RangeKind::Coarse, 1),
-        fine: RangedValue::from_int(RangeKind::Fine, 0),
-        detune: 0,
+        ..op
     };
 
     let op5 = Operator {
@@ -204,36 +207,17 @@ fn make_brass1() -> Voice {
             level3: EnvelopeGenerator::new_level(98),
             level4: EnvelopeGenerator::new_level(0),
         },
-        kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60 - 21, left_depth: 0, right_depth: 0,
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-            right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-        },
-        kbd_rate_scaling: 0,
-        amp_mod_sens: 0,
-        key_vel_sens: 2,
+        kbd_level_scaling,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 98),
-        mode: OperatorMode::Ratio,
-        coarse: RangedValue::from_int(RangeKind::Coarse, 1),
-        fine: RangedValue::from_int(RangeKind::Fine, 0),
         detune: 1,
+        ..op
     };
 
     let op4 = Operator {
         eg: op5.eg.clone(),
-        kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60 - 21, left_depth: 0, right_depth: 0,
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-            right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-        },
-        kbd_rate_scaling: 0,
-        amp_mod_sens: 0,
-        key_vel_sens: 2,
+        kbd_level_scaling,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 99),
-        mode: OperatorMode::Ratio,
-        coarse: RangedValue::from_int(RangeKind::Coarse, 1),
-        fine: RangedValue::from_int(RangeKind::Fine, 0),
-        detune: 0,
+        ..op
     };
 
     let op3 = Operator {
@@ -247,19 +231,10 @@ fn make_brass1() -> Voice {
             level3: EnvelopeGenerator::new_level(98),
             level4: EnvelopeGenerator::new_level(0),
         },
-        kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60 - 21, left_depth: 0, right_depth: 0,
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-            right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-        },
-        kbd_rate_scaling: 0,
-        amp_mod_sens: 0,
-        key_vel_sens: 2,
+        kbd_level_scaling,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 99),
-        mode: OperatorMode::Ratio,
-        coarse: RangedValue::from_int(RangeKind::Coarse, 1),
-        fine: RangedValue::from_int(RangeKind::Fine, 0),
         detune: -2,
+        ..op
     };
 
     let op2 = Operator {
@@ -274,18 +249,17 @@ fn make_brass1() -> Voice {
             level4: EnvelopeGenerator::new_level(0),
         },
         kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 48 - 21, left_depth: 0, right_depth: 7,
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-            right_curve: ScalingCurve { curve: CurveStyle::Exponential, positive: false },
+            breakpoint: 48 - 21,
+            left_depth: 0,
+            right_depth: 7,
+            left_curve: ScalingCurve::lin_pos(),
+            right_curve: ScalingCurve::exp_neg(),
         },
-        kbd_rate_scaling: 0,
-        amp_mod_sens: 0,
         key_vel_sens: 0,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 86),
-        mode: OperatorMode::Ratio,
         coarse: RangedValue::from_int(RangeKind::Coarse, 0),
-        fine: RangedValue::from_int(RangeKind::Fine, 0),  // this was 50 in the DX7 manual
         detune: 7,
+        ..op
     };
 
     let op1 = Operator {
@@ -300,27 +274,18 @@ fn make_brass1() -> Voice {
             level4: EnvelopeGenerator::new_level(0),
         },
         kbd_level_scaling: KeyboardLevelScaling {
-            breakpoint: 60 - 21, left_depth: 0, right_depth: 14,
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
-            right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: true },
+            right_depth: 14,
+            ..kbd_level_scaling
         },
-        kbd_rate_scaling: 0,
-        amp_mod_sens: 0,
         key_vel_sens: 0,
         output_level: RangedValue::from_int(RangeKind::OutputLevel, 98),
-        mode: OperatorMode::Ratio,
         coarse: RangedValue::from_int(RangeKind::Coarse, 0),
-        fine: RangedValue::from_int(RangeKind::Fine, 0),
         detune: 7,
+        ..op
     };
 
     Voice {
-        op1: op1,
-        op2: op2,
-        op3: op3,
-        op4: op4,
-        op5: op5,
-        op6: op6,
+        op1, op2, op3, op4, op5, op6,
         peg: EnvelopeGenerator {
             rate1: EnvelopeGenerator::new_rate(84),
             rate2: EnvelopeGenerator::new_rate(95),
@@ -358,8 +323,8 @@ fn make_init_voice() -> Voice {
     // Depth = 0 for both curves, all operators
     let init_kbd_level_scaling = KeyboardLevelScaling {
         breakpoint: 0, left_depth: 0, right_depth: 0,
-        left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: false },
-        right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: false },
+        left_curve: ScalingCurve::lin_neg(),
+        right_curve: ScalingCurve::lin_neg(),
     };
 
     let init_op1 = Operator {
@@ -502,9 +467,9 @@ pub fn run() -> std::io::Result<()> {
     let mut cartridge_data: Vec<u8> = Vec::new();
 
     for (index, voice) in cartridge.iter().enumerate() {
-        let mut voice_data = voice.to_packed_bytes();
+        let voice_data = voice.to_packed_bytes();
         debug!("Voice #{} packed data length = {} bytes", index, voice_data.len());
-        cartridge_data.append(&mut voice_data);
+        cartridge_data.extend(voice_data);
     }
 
     // Compute the checksum before we add the SysEx header and terminator,
@@ -734,8 +699,8 @@ impl KeyboardLevelScaling {
             breakpoint: 60 - 21,  // Yamaha C3 is 60 - 21 = 39
             left_depth:  0,
             right_depth: 0,
-            left_curve: ScalingCurve { curve: CurveStyle::Linear, positive: false },
-            right_curve: ScalingCurve { curve: CurveStyle::Linear, positive: false },
+            left_curve: ScalingCurve::lin_neg(),
+            right_curve: ScalingCurve::lin_neg(),
         }
     }
 
@@ -849,8 +814,8 @@ impl Operator {
     /// Gets the SysEx bytes representing the operator.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
-        data.append(&mut self.eg.to_bytes());
-        data.append(&mut self.kbd_level_scaling.to_bytes());
+        data.extend(self.eg.to_bytes());
+        data.extend(self.kbd_level_scaling.to_bytes());
         data.push(self.kbd_rate_scaling);
         data.push(self.amp_mod_sens);
         data.push(self.key_vel_sens);
@@ -867,13 +832,13 @@ impl Operator {
     pub fn to_packed_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
 
-        let mut eg_data = self.eg.to_bytes(); // not packed!
+        let eg_data = self.eg.to_bytes(); // not packed!
         debug!("  EG: {} bytes, {:?}", eg_data.len(), eg_data);
-        data.append(&mut eg_data);
+        data.extend(eg_data);
 
-        let mut kls_data = self.kbd_level_scaling.to_packed_bytes();
+        let kls_data = self.kbd_level_scaling.to_packed_bytes();
         debug!("  KLS: {} bytes, {:?}", kls_data.len(), kls_data);
-        data.append(&mut kls_data);
+        data.extend(kls_data);
 
         let byte12 = self.kbd_rate_scaling | (((self.detune + 7) as u8) << 3);
         debug!("  KBD RATE SCALING = {:?} DETUNE = {:?} b12: {:#08b}", self.kbd_rate_scaling, self.detune, byte12);
@@ -1031,24 +996,24 @@ impl Voice {
     /// Gets the SysEx bytes representing this voice.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
-        data.append(&mut self.op6.to_bytes());
-        data.append(&mut self.op5.to_bytes());
-        data.append(&mut self.op4.to_bytes());
-        data.append(&mut self.op3.to_bytes());
-        data.append(&mut self.op2.to_bytes());
-        data.append(&mut self.op1.to_bytes());
+        data.extend(self.op6.to_bytes());
+        data.extend(self.op5.to_bytes());
+        data.extend(self.op4.to_bytes());
+        data.extend(self.op3.to_bytes());
+        data.extend(self.op2.to_bytes());
+        data.extend(self.op1.to_bytes());
 
-        data.append(&mut self.peg.to_bytes());
+        data.extend(self.peg.to_bytes());
 
         data.push(self.alg - 1);
         data.push(self.feedback);
         data.push(if self.osc_sync { 1 } else { 0 });
-        data.append(&mut self.lfo.to_bytes());
+        data.extend(self.lfo.to_bytes());
         data.push(self.pitch_mod_sens);
         data.push(self.transpose);
 
         let padded_name = format!("{:<10}", self.name);
-        data.append(&mut padded_name.into_bytes());
+        data.extend(padded_name.into_bytes());
 
         let mut rev_flags = self.op_flags;
         rev_flags.reverse();
@@ -1067,33 +1032,33 @@ impl Voice {
     pub fn to_packed_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = Vec::new();
 
-        let mut op6_data = self.op6.to_packed_bytes();
+        let op6_data = self.op6.to_packed_bytes();
         debug!("OP6: {} bytes, {:?}", op6_data.len(), op6_data);
-        data.append(&mut op6_data);
+        data.extend(op6_data);
 
-        let mut op5_data = self.op5.to_packed_bytes();
+        let op5_data = self.op5.to_packed_bytes();
         debug!("OP5: {} bytes, {:?}", op5_data.len(), op5_data);
-        data.append(&mut op5_data);
+        data.extend(op5_data);
 
-        let mut op4_data = self.op4.to_packed_bytes();
+        let op4_data = self.op4.to_packed_bytes();
         debug!("OP4: {} bytes, {:?}", op4_data.len(), op4_data);
-        data.append(&mut op4_data);
+        data.extend(op4_data);
 
-        let mut op3_data = self.op3.to_packed_bytes();
+        let op3_data = self.op3.to_packed_bytes();
         debug!("OP3: {} bytes, {:?}", op3_data.len(), op3_data);
-        data.append(&mut op3_data);
+        data.extend(op3_data);
 
-        let mut op2_data = self.op2.to_packed_bytes();
+        let op2_data = self.op2.to_packed_bytes();
         debug!("OP2: {} bytes, {:?}", op2_data.len(), op2_data);
-        data.append(&mut op2_data);
+        data.extend(op2_data);
 
-        let mut op1_data = self.op1.to_packed_bytes();
+        let op1_data = self.op1.to_packed_bytes();
         debug!("OP1: {} bytes, {:?}", op1_data.len(), op1_data);
-        data.append(&mut op1_data);
+        data.extend(op1_data);
 
-        let mut peg_data = self.peg.to_bytes(); // not packed!
+        let peg_data = self.peg.to_bytes(); // not packed!
         debug!("PEG: {} bytes, {:?}", peg_data.len(), peg_data);
-        data.append(&mut peg_data);
+        data.extend(peg_data);
 
         data.push(self.alg - 1);  // bring alg to range 0...31
         debug!("ALG: {}", self.alg);
@@ -1108,14 +1073,14 @@ impl Voice {
         lfo_data[lfo_data_length - 1].set_bit_range(4..7, self.pitch_mod_sens);
 
         debug!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);
-        data.append(&mut lfo_data);
+        data.extend(lfo_data);
 
         data.push(self.transpose);
         debug!("  TRNSP: {:#02X}", self.transpose);
 
         let padded_name = format!("{:<10}", self.name);
         debug!("  NAME: '{}'", padded_name);
-        data.append(&mut padded_name.into_bytes());
+        data.extend(padded_name.into_bytes());
 
         assert_eq!(data.len(), 128);
 
