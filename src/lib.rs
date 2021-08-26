@@ -26,6 +26,7 @@ pub enum RangeKind {
     Fine,
     Algorithm,
     Detune,
+    PitchModulationSensitivity,
 }
 
 // Rust ranges are not Copy because reasons (see https://github.com/rust-lang/rfcs/issues/2848),
@@ -70,6 +71,7 @@ impl RangedValue {
             RangeKind::Fine => RangeInclusiveWrapper { start: 0, end: 99 },
             RangeKind::Algorithm => RangeInclusiveWrapper { start: 1, end: 32 },
             RangeKind::Detune => RangeInclusiveWrapper { start: -7, end: 7 },
+            RangeKind::PitchModulationSensitivity => RangeInclusiveWrapper { start: 0, end: 7 }
         }
     }
 
@@ -313,8 +315,8 @@ fn make_brass1() -> Voice {
             pmd: RangedValue::from_int(RangeKind::Level, 5),
             amd: RangedValue::new_min(RangeKind::Level),
             sync: false, wave: LfoWaveform::Sine,
+            pitch_mod_sens: RangedValue::from_int(RangeKind::PitchModulationSensitivity, 3),
         },
-        pitch_mod_sens: 3,
         transpose: 24,
         name: "BRASS   1 ".to_string(),
         op_flags: [true, true, true, true, true, true],
@@ -373,8 +375,8 @@ fn make_init_voice() -> Voice {
             amd: RangedValue::new_min(RangeKind::Level),
             sync: true,
             wave: LfoWaveform::Triangle,
+            pitch_mod_sens: RangedValue::from_int(RangeKind::PitchModulationSensitivity, 3),
         },
-        pitch_mod_sens: 3,
         transpose: 24,
         name: "INIT VOICE".to_string(),
         op_flags: [true, true, true, true, true, true],  // all operators ON
@@ -434,7 +436,6 @@ fn make_random_voice() -> Voice {
         feedback: 0,
         osc_sync: true, // osc key sync = on
         lfo: Lfo::new_random(),
-        pitch_mod_sens: 3,
         transpose: 24,
         name: "RNDM VOICE".to_string(),
         op_flags: [true, true, true, true, true, true],  // all operators ON
@@ -904,6 +905,7 @@ pub struct Lfo {
     pub amd: RangedValue,    // 0 ~ 99
     pub sync: bool,
     pub wave: LfoWaveform,
+    pub pitch_mod_sens: RangedValue,  // 0 ~ 7
 }
 
 impl Lfo {
@@ -916,30 +918,8 @@ impl Lfo {
             amd: RangedValue::new_min(RangeKind::Level),
             sync: true,
             wave: LfoWaveform::Triangle,
+            pitch_mod_sens: RangedValue::new_min(RangeKind::PitchModulationSensitivity),
         }
-    }
-
-    /// Gets the SysEx bytes representing this LFO.
-    pub fn to_bytes(&self) -> ByteVector {
-        vec![
-            self.speed.as_byte(),
-            self.delay.as_byte(),
-            self.pmd.as_byte(),
-            self.amd.as_byte(),
-            if self.sync { 1 } else { 0 },
-            self.wave as u8,
-        ]
-    }
-
-    /// Gets the packed SysEx bytes representing this LFO.
-    pub fn to_packed_bytes(&self) -> ByteVector {
-        vec![
-            self.speed.as_byte(),
-            self.delay.as_byte(),
-            self.pmd.as_byte(),
-            self.amd.as_byte(),
-            (if self.sync { 1 } else { 0 }) | ((self.wave as u8) << 1),
-        ]
     }
 
     /// Makes a new LFO with random settings.
@@ -952,7 +932,59 @@ impl Lfo {
             amd: RangedValue::from_int(RangeKind::Level, level.random_value()),
             sync: true,
             wave: LfoWaveform::Triangle,
+            pitch_mod_sens: RangedValue::from_int(RangeKind::PitchModulationSensitivity, level.random_value()),
         }
+    }
+}
+
+impl SystemExclusiveData for Lfo {
+    fn from_bytes(data: ByteVector) -> Self {
+        Lfo {
+            speed: RangedValue::from_byte(RangeKind::Level, data[0]),
+            delay: RangedValue::from_byte(RangeKind::Level, data[1]),
+            pmd: RangedValue::from_byte(RangeKind::Level, data[2]),
+            amd: RangedValue::from_byte(RangeKind::Level, data[3]),
+            sync: if data[4] == 1u8 { true } else { false },
+            wave: match data[5] {
+                0 => LfoWaveform::Triangle,
+                1 => LfoWaveform::SawDown,
+                2 => LfoWaveform::SawUp,
+                3 => LfoWaveform::Square,
+                4 => LfoWaveform::Sine,
+                5 => LfoWaveform::SampleAndHold,
+                _ => {
+                    warn!("LFO waveform out of range: {}, setting to TRI", data[5]);
+                    LfoWaveform::Triangle
+                }
+            },
+            pitch_mod_sens: RangedValue::from_byte(RangeKind::PitchModulationSensitivity, data[6]),
+        }
+    }
+
+    fn to_bytes(&self) -> ByteVector {
+        vec![
+            self.speed.as_byte(),
+            self.delay.as_byte(),
+            self.pmd.as_byte(),
+            self.amd.as_byte(),
+            if self.sync { 1 } else { 0 },
+            self.wave as u8,
+            self.pitch_mod_sens.as_byte(),
+        ]
+    }
+
+    fn to_packed_bytes(&self) -> ByteVector {
+        let mut b116: u8 = if self.sync { 1 } else { 0 };
+        b116.set_bit_range(1..4, self.wave as u8);
+        b116.set_bit_range(4..7, self.pitch_mod_sens.as_byte());
+
+        vec![
+            self.speed.as_byte(),
+            self.delay.as_byte(),
+            self.pmd.as_byte(),
+            self.amd.as_byte(),
+            b116,
+        ]
     }
 }
 
@@ -970,7 +1002,6 @@ pub struct Voice {
     pub feedback: u8,
     pub osc_sync: bool,
     pub lfo: Lfo,
-    pub pitch_mod_sens: u8,
     pub transpose: u8,  // +/- 2 octaves (12 = C2  (value is 0~48 in SysEx))
     pub name: String,
     pub op_flags: [bool; 6],
@@ -997,16 +1028,36 @@ impl Voice {
             feedback: 0,
             osc_sync: true,
             lfo: Lfo::new(),
-            pitch_mod_sens: 3,
             transpose: 24,
             name: "INIT VOICE".to_string(),
             op_flags: [true, true, true, true, true, true],
         }
     }
+}
 
-    /// Gets the SysEx bytes representing this voice.
-    pub fn to_bytes(&self) -> ByteVector {
+impl SystemExclusiveData for Voice {
+    fn from_bytes(data: ByteVector) -> Self {
+        Voice {
+            op6: Operator::from_bytes(data[0..21].to_vec()),
+            op5: Operator::from_bytes(data[21..42].to_vec()),
+            op4: Operator::from_bytes(data[42..64].to_vec()),
+            op3: Operator::from_bytes(data[64..86].to_vec()),
+            op2: Operator::from_bytes(data[86..108].to_vec()),
+            op1: Operator::from_bytes(data[108..126].to_vec()),
+            peg: EnvelopeGenerator::from_bytes(data[126..134].to_vec()),
+            alg: RangedValue::from_byte(RangeKind::Algorithm, data[134]),
+            feedback: data[135],
+            osc_sync: if data[136] == 1 { true } else { false },
+            lfo: Lfo::from_bytes(data[137..144].to_vec()),
+            transpose: data[144],
+            name: String::from_utf8(data[145..155].to_vec()).unwrap(),
+            op_flags: [data[155].bit(5), data[155].bit(4), data[155].bit(3), data[155].bit(2), data[155].bit(1), data[155].bit(0),]
+        }
+    }
+
+    fn to_bytes(&self) -> ByteVector {
         let mut data: Vec<u8> = Vec::new();
+
         data.extend(self.op6.to_bytes());
         data.extend(self.op5.to_bytes());
         data.extend(self.op4.to_bytes());
@@ -1020,7 +1071,6 @@ impl Voice {
         data.push(self.feedback);
         data.push(if self.osc_sync { 1 } else { 0 });
         data.extend(self.lfo.to_bytes());
-        data.push(self.pitch_mod_sens);
         data.push(self.transpose);
 
         let padded_name = format!("{:<10}", self.name);
@@ -1039,8 +1089,7 @@ impl Voice {
         data
     }
 
-    /// Gets the packed SysEx bytes representing this voice.
-    pub fn to_packed_bytes(&self) -> ByteVector {
+    fn to_packed_bytes(&self) -> ByteVector {
         let mut data: Vec<u8> = Vec::new();
 
         let op6_data = self.op6.to_packed_bytes();
@@ -1080,10 +1129,7 @@ impl Voice {
         debug!("  b111: {:#08b}", byte111);
 
         // Inject the pitch mod sensitivity value to the last LFO byte
-        let mut lfo_data = self.lfo.to_packed_bytes();
-        let lfo_data_length = lfo_data.len();
-        lfo_data[lfo_data_length - 1].set_bit_range(4..7, self.pitch_mod_sens);
-
+        let lfo_data = self.lfo.to_packed_bytes();
         debug!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);
         data.extend(lfo_data);
 
@@ -1225,11 +1271,12 @@ mod tests {
             amd: RangedValue::new_min(RangeKind::Level),
             sync: false,
             wave: LfoWaveform::Sine,
+            pitch_mod_sens: RangedValue::from_int(RangeKind::PitchModulationSensitivity, 3),
         };
 
         assert_eq!(
             lfo.to_packed_bytes(),
-            vec![37, 0, 5, 0, 0b00001000]
+            vec![37, 0, 5, 0, 0b11010000]
         );
     }
 
@@ -1279,31 +1326,6 @@ mod tests {
         }
 
         assert_eq!(brass1_data, voice_data);
-    }
-
-    #[test]
-    fn test_bulk_b116() {
-        let lfo = Lfo {
-            speed: RangedValue::from_int(RangeKind::Level, 37),
-            delay: RangedValue::new_min(RangeKind::Level),
-            pmd: RangedValue::from_int(RangeKind::Level, 5),
-            amd: RangedValue::new_min(RangeKind::Level),
-            sync: true,
-            wave: LfoWaveform::Square,
-        };
-
-        let pitch_mod_sens = 3u8;  // 0b011
-        let sync = true;
-
-        // Index of LFO square waveform is 3 = 0b011
-
-        // |765|4321|0
-        // |PMS|LFW |S
-
-        let expected = 0b0_011_011_1;
-        let mut actual = (if lfo.sync { 1 } else { 0 }) | ((lfo.wave as u8) << 1);
-        actual |= pitch_mod_sens << 4;
-        assert_eq!(actual, expected);
     }
 
     #[test]
