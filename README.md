@@ -39,7 +39,7 @@ packed data for 32 voices, so the data for one voice is 128 bytes.
 A Yamaha DX7 voice has six operators, while an envelope generator has four rates and
 four levels. These numbers are never going to change when dealing with DX7 data.
 That is why each operator has its own member in the `Voice` struct, and each rate and
-level similarly has its own member in the `EnvelopeGenerator` struct. In my opinion,
+level similarly has its own member in the `Envelope` struct. In my opinion,
 this makes the code significantly easier to read and write, compared to traditional
 zero-based array/vector indexing. It is more intuitive to write `op1.level` than
 `op[0].level`.
@@ -56,3 +56,8 @@ That is why the `RangedValue` struct uses a wrapper type, `RangeInclusiveWrapper
 an `i16` value with the start and end of the allowable range. `i16` is used as the base
 type because it is the smallest data type that can fit all the metric parameter values
 (some of them extend to negative values).
+
+### The newtype pattern
+
+The data types of some struct members are defined using the newtype pattern in Rust.
+I hope to explain this better when the experiment is finished.
