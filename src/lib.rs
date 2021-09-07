@@ -204,7 +204,7 @@ pub struct Depth(u8);
 
 impl Depth {
     fn range() -> Wrapper<u8> {
-        Wrapper { start: 0, end: 31 }
+        Wrapper { start: 0, end: 7 }
     }
 
     pub fn new(value: u8) -> Depth {
@@ -599,6 +599,7 @@ fn make_random_voice() -> Voice {
 
 const VOICE_COUNT: usize = 32;
 
+#[derive(Debug)]
 struct Cartridge {
     voices: Vec<Voice>,
 }
@@ -660,6 +661,13 @@ fn make_random_cartridge() -> Cartridge {
 
 /// Runs the cartridge generation routine.
 pub fn run() -> std::io::Result<()> {
+    // Show the ROM1 cartridge contents (just for testing):
+    let rom1a_data: [u8; 4096] = include!("rom1asyx.in");
+    let rom1a_cartridge = Cartridge::from_packed_bytes(rom1a_data.to_vec());
+    for voice in rom1a_cartridge.voices.iter() {
+        println!("{}", voice.name);
+    }
+
     // Get the default voice with `Voice::new()`.
     // The `make_init_voice()` function makes exactly the original init voice.
     // These should be more or less the same.
