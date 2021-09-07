@@ -1,6 +1,6 @@
 [package]
 name = "sevenator"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Jere Käpyaho <jere@coniferproductions.com>"]
 edition = "2018"
 

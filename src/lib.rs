@@ -48,7 +48,7 @@ impl UnsignedLevel {
     }
 
     pub fn as_byte(&self) -> u8 {
-        (self.0 + 64) as u8
+        self.0 as u8
     }
 
     pub fn value(&self) -> u8 {
@@ -195,6 +195,46 @@ impl Coarse {
 impl From<u8> for Coarse {
     fn from(value: u8) -> Coarse {
         Coarse::new(value)
+    }
+}
+
+/// Depth (0...7) for sensitivity values.
+#[derive(Debug, Clone, Copy)]
+pub struct Depth(u8);
+
+impl Depth {
+    fn range() -> Wrapper<u8> {
+        Wrapper { start: 0, end: 31 }
+    }
+
+    pub fn new(value: u8) -> Depth {
+        let range = Depth::range();
+        Depth(num::clamp(value, range.start, range.end))
+    }
+
+    pub fn as_byte(&self) -> u8 {
+        self.0
+    }
+
+    pub fn value(&self) -> u8 {
+        self.0
+    }
+}
+
+impl From<u8> for Depth {
+    fn from(value: u8) -> Depth {
+        Depth::new(value)
+    }
+}
+
+impl RandomValue for Depth {
+    type B = Depth;
+    type T = u8;
+
+    fn random_value() -> Self::B {
+        let mut rng = rand::thread_rng();
+        let range = Self::B::range();
+        Self::B::from(rng.gen_range(range.start..=range.end))
     }
 }
 
@@ -365,12 +405,12 @@ fn make_brass1() -> Voice {
 
     // Make one operator and then specify the differences to the others.
     let op = Operator {
-        key_vel_sens: 2,
+        key_vel_sens: Depth::from(2),
         ..Operator::new()
     };
 
     let op6 = Operator {
-        eg: Envelope::new_rate_level(Rates(77, 99, 28, 68), Levels(98, 98, 91, 0)),
+        eg: Envelope::new_rate_level(Rates(49, 99, 28, 68), Levels(98, 98, 91, 0)),
         kbd_level_scaling: KeyboardLevelScaling {
             left_depth: 54,
             right_depth: 50,
@@ -378,7 +418,7 @@ fn make_brass1() -> Voice {
             right_curve: ScalingCurve::exp_neg(),
             ..kbd_level_scaling
         },
-        kbd_rate_scaling: 4,
+        kbd_rate_scaling: Depth::from(4),
         output_level: Level::from(82),
         ..op
     };
@@ -415,7 +455,7 @@ fn make_brass1() -> Voice {
             left_curve: ScalingCurve::lin_pos(),
             right_curve: ScalingCurve::exp_neg(),
         },
-        key_vel_sens: 0,
+        key_vel_sens: Depth::from(0),
         output_level: Level::from(86),
         coarse: Coarse::from(0),
         detune: Detune::from(7),
@@ -428,7 +468,7 @@ fn make_brass1() -> Voice {
             right_depth: 14,
             ..kbd_level_scaling
         },
-        key_vel_sens: 0,
+        key_vel_sens: Depth::from(0),
         output_level: Level::from(98),
         coarse: Coarse::from(0),
         detune: Detune::from(7),
@@ -448,7 +488,7 @@ fn make_brass1() -> Voice {
             amd: Level::from(0),
             sync: false,
             wave: LfoWaveform::Sine,
-            pitch_mod_sens: RangedValue::from_int(RangeKind::PitchModulationSensitivity, 3),
+            pitch_mod_sens: Depth::from(3),
         },
         transpose: 24,
         name: "BRASS   1 ".to_string(),
@@ -464,9 +504,9 @@ fn make_init_voice() -> Voice {
     let init_op1 = Operator {
         eg: init_eg.clone(),
         kbd_level_scaling: KeyboardLevelScaling::new(),
-        kbd_rate_scaling: 0,
+        kbd_rate_scaling: Depth::from(0),
         amp_mod_sens: 0,
-        key_vel_sens: 0,
+        key_vel_sens: Depth::from(0),
         output_level: Level::from(99),
         mode: OperatorMode::Ratio,
         coarse: Coarse::from(1),
@@ -499,7 +539,7 @@ fn make_init_voice() -> Voice {
             amd: Level::from(0),
             sync: true,
             wave: LfoWaveform::Triangle,
-            pitch_mod_sens: RangedValue::from_int(RangeKind::PitchModulationSensitivity, 3),
+            pitch_mod_sens: Depth::from(3),
         },
         transpose: 24,
         name: "INIT VOICE".to_string(),
@@ -526,9 +566,9 @@ fn make_random_operator() -> Operator {
     Operator {
         eg: make_random_eg(),
         kbd_level_scaling: KeyboardLevelScaling::new(),
-        kbd_rate_scaling: 0,
+        kbd_rate_scaling: Depth::from(0),
         amp_mod_sens: 0,
-        key_vel_sens: 0,
+        key_vel_sens: Depth::from(0),
         output_level: Level::random_value(),
         mode: OperatorMode::Ratio,
         coarse: Coarse::from(1),
@@ -559,14 +599,63 @@ fn make_random_voice() -> Voice {
 
 const VOICE_COUNT: usize = 32;
 
-// Makes a cartridge filled with init voices.
-fn make_init_cartridge() -> Vec<Voice> {
-    vec![make_init_voice(); VOICE_COUNT]
+struct Cartridge {
+    voices: Vec<Voice>,
+}
+
+impl Default for Cartridge {
+    fn default() -> Self {
+        Cartridge {
+            voices: vec![Default::default(); VOICE_COUNT],
+        }
+    }
+}
+
+impl SystemExclusiveData for Cartridge {
+    fn from_bytes(data: ByteVector) -> Self {
+        // Delegate to the packed bytes constructor,
+        // since the cartridge data is always in packed format.
+        warn!("from_bytes() called for Cartridge, delegating to from_packed_bytes()");
+        Cartridge::from_packed_bytes(data)
+    }
+
+    fn from_packed_bytes(data: ByteVector) -> Self {
+        let mut offset = 0;
+        let mut voices = Vec::<Voice>::new();
+        for _ in 0..VOICE_COUNT {
+            voices.push(Voice::from_packed_bytes(data[offset..offset + 128].to_vec()));
+            offset += 128;
+        }
+        Cartridge { voices }
+    }
+
+    fn to_bytes(&self) -> ByteVector {
+        // Delegate to the to_packed_bytes() method,
+        // since the cartridge data is always in packed format.
+        warn!("to_bytes() called for Cartridge, delegating to to_packed_bytes()");
+        self.to_packed_bytes()
+    }
+
+    fn to_packed_bytes(&self) -> ByteVector {
+        let mut data: ByteVector = Vec::new();
+
+        for (index, voice) in self.voices.iter().enumerate() {
+            let voice_data = voice.to_packed_bytes();
+            debug!("Voice #{} packed data length = {} bytes", index, voice_data.len());
+            data.extend(voice_data);
+        }
+
+        data
+    }
+
+    fn data_size(&self) -> usize { 4096 }
 }
 
 // Makes a cartridge filled with random voices.
-fn make_random_cartridge() -> Vec<Voice> {
-    vec![make_random_voice(); VOICE_COUNT]
+fn make_random_cartridge() -> Cartridge {
+    Cartridge {
+        voices: vec![make_random_voice(); VOICE_COUNT],
+    }
 }
 
 /// Runs the cartridge generation routine.
@@ -574,18 +663,12 @@ pub fn run() -> std::io::Result<()> {
     // Get the default voice with `Voice::new()`.
     // The `make_init_voice()` function makes exactly the original init voice.
     // These should be more or less the same.
-    //let cartridge = make_init_cartridge();
+    //let cartridge: Cartridge = Default::default();
 
     // Make a cartridge full of random voices
     let cartridge = make_random_cartridge();
 
-    let mut cartridge_data: Vec<u8> = Vec::new();
-
-    for (index, voice) in cartridge.iter().enumerate() {
-        let voice_data = voice.to_packed_bytes();
-        debug!("Voice #{} packed data length = {} bytes", index, voice_data.len());
-        cartridge_data.extend(voice_data);
-    }
+    let mut cartridge_data = cartridge.to_packed_bytes();
 
     // Compute the checksum before we add the SysEx header and terminator,
     // but don't add it yet -- only just before the terminator.
@@ -608,7 +691,7 @@ pub fn run() -> std::io::Result<()> {
         cartridge_data.insert(0, *b);
     }
 
-    // Now is the right time to apped the checksum
+    // Now is the right time to append the checksum
     cartridge_data.push(cartridge_checksum);
 
     // Add the System Exclusive message terminator:
@@ -630,6 +713,7 @@ pub fn run() -> std::io::Result<()> {
 /// Parsing and generating MIDI System Exclusive data.
 pub trait SystemExclusiveData {
     fn from_bytes(data: ByteVector) -> Self;
+    fn from_packed_bytes(data: ByteVector) -> Self;
     fn to_bytes(&self) -> ByteVector;
     fn to_packed_bytes(&self) -> ByteVector { vec![] }
     fn data_size(&self) -> usize { 0 }
@@ -718,6 +802,15 @@ impl SystemExclusiveData for Envelope {
             Rates(data[0], data[1], data[2], data[3]),
             Levels(data[4], data[5], data[6], data[7]),
         )
+    }
+
+    /// Makes an envelope generator from packed SysEx message bytes.
+    fn from_packed_bytes(data: ByteVector) -> Self {
+        Envelope::from_bytes(data)
+    }
+
+    fn to_packed_bytes(&self) -> ByteVector {
+        self.to_bytes()
     }
 
     /// Gets the SysEx bytes of this EG.
@@ -828,6 +921,11 @@ impl SystemExclusiveData for KeyboardLevelScaling {
         }
     }
 
+    /// Makes new keyboard level scaling settings from packed SysEx bytes.
+    fn from_packed_bytes(data: ByteVector) -> Self {
+        KeyboardLevelScaling::from_bytes(data)
+    }
+
     /// Gets the SysEx bytes representing this set of parameters.
     fn to_bytes(&self) -> ByteVector {
         vec![
@@ -858,13 +956,13 @@ pub enum OperatorMode {
 }
 
 /// Operator.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Operator {
     pub eg: Envelope,
     pub kbd_level_scaling: KeyboardLevelScaling,
-    pub kbd_rate_scaling: u8, // 0 ~ 7
+    pub kbd_rate_scaling: Depth, // 0 ~ 7
     pub amp_mod_sens: u8,  // 0 ~ 3
-    pub key_vel_sens: u8,  // 0 ~ 7
+    pub key_vel_sens: Depth,  // 0 ~ 7
     pub output_level: Level,
     pub mode: OperatorMode,
     pub coarse: Coarse,  // 0 ~ 31
@@ -878,9 +976,9 @@ impl Operator {
         Self {
             eg: Envelope::new(),
             kbd_level_scaling: KeyboardLevelScaling::new(),
-            kbd_rate_scaling: 0,
+            kbd_rate_scaling: Depth::from(0),
             amp_mod_sens: 0,
-            key_vel_sens: 0,
+            key_vel_sens: Depth::from(0),
             output_level: Level::from(0),
             mode: OperatorMode::Ratio,
             coarse: Coarse::from(1),
@@ -904,29 +1002,41 @@ impl SystemExclusiveData for Operator {
         Self {
             eg: Envelope::from_bytes(eg_bytes.to_vec()),
             kbd_level_scaling: KeyboardLevelScaling::from_bytes(level_scaling_bytes.to_vec()),
-            kbd_rate_scaling: data[14],
+            kbd_rate_scaling: Depth::from(data[14]),
             amp_mod_sens: data[15],
-            key_vel_sens: data[16],
+            key_vel_sens: Depth::from(data[16]),
             output_level: Level::from(data[17]),
-            mode: match data[18] {
-                0 => OperatorMode::Ratio,
-                1 => OperatorMode::Fixed,
-                _ => OperatorMode::Ratio
-            },
+            mode: if data[18] == 0b1 { OperatorMode::Fixed } else { OperatorMode::Ratio },
             coarse: Coarse::from(data[19]),
             fine: Level::from(data[20]),
             detune: Detune::from(data[21]),
         }
     }
 
+    /// Makes a new operator from packed SysEx bytes.
+    fn from_packed_bytes(data: ByteVector) -> Self {
+        Operator {
+            eg: Envelope::from_packed_bytes(data[0..8].to_vec()),
+            kbd_level_scaling: KeyboardLevelScaling::from_packed_bytes(data[8..12].to_vec()),
+            kbd_rate_scaling: Depth::from(data[12].bit_range(0..3)),
+            amp_mod_sens: data[13].bit_range(0..2),
+            key_vel_sens: Depth::from(data[13].bit_range(2..5)),
+            output_level: Level::from(data[14]),
+            mode: if data[15].bit(0) { OperatorMode::Fixed } else { OperatorMode::Ratio },
+            coarse: Coarse::from(data[15].bit_range(1..6)),
+            fine: Level::from(data[16]),
+            detune: Detune::from(data[12].bit_range(3..7)),
+        }
+    }
+
     /// Gets the SysEx bytes representing the operator.
     fn to_bytes(&self) -> ByteVector {
-        let mut data: Vec<u8> = Vec::new();
+        let mut data: ByteVector = Vec::new();
         data.extend(self.eg.to_bytes());
         data.extend(self.kbd_level_scaling.to_bytes());
-        data.push(self.kbd_rate_scaling);
+        data.push(self.kbd_rate_scaling.as_byte());
         data.push(self.amp_mod_sens);
-        data.push(self.key_vel_sens);
+        data.push(self.key_vel_sens.as_byte());
         data.push(self.output_level.as_byte());
         data.push(self.mode as u8);
         data.push(self.coarse.as_byte());
@@ -938,9 +1048,9 @@ impl SystemExclusiveData for Operator {
 
     /// Gets the packed SysEx bytes representing the operator.
     fn to_packed_bytes(&self) -> ByteVector {
-        let mut data: Vec<u8> = Vec::new();
+        let mut data: ByteVector = Vec::new();
 
-        let eg_data = self.eg.to_bytes(); // not packed!
+        let eg_data = self.eg.to_packed_bytes();
         debug!("  EG: {} bytes, {:?}", eg_data.len(), eg_data);
         data.extend(eg_data);
 
@@ -949,11 +1059,11 @@ impl SystemExclusiveData for Operator {
         data.extend(kls_data);
 
         let detune = self.detune.as_byte();
-        let byte12 = self.kbd_rate_scaling | (detune << 3);
+        let byte12 = self.kbd_rate_scaling.as_byte() | (detune << 3);
         debug!("  KBD RATE SCALING = {:?} DETUNE = {:?} b12: {:#08b}", self.kbd_rate_scaling, self.detune, byte12);
         data.push(byte12);
 
-        let byte13 = self.amp_mod_sens | (self.key_vel_sens << 2);
+        let byte13 = self.amp_mod_sens | (self.key_vel_sens.as_byte() << 2);
         debug!("  b13: {:#08b}", byte12);
         data.push(byte13);
 
@@ -968,8 +1078,6 @@ impl SystemExclusiveData for Operator {
         let fine = self.fine.value();
         debug!("  FF:  {:#08b}", fine);
         data.push(self.fine.as_byte());
-
-        assert_eq!(data.len(), 17);
 
         data
     }
@@ -988,7 +1096,7 @@ pub enum LfoWaveform {
 }
 
 /// LFO.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Lfo {
     pub speed: Level,  // 0 ~ 99
     pub delay: Level,  // 0 ~ 99
@@ -996,7 +1104,7 @@ pub struct Lfo {
     pub amd: Level,    // 0 ~ 99
     pub sync: bool,
     pub wave: LfoWaveform,
-    pub pitch_mod_sens: RangedValue,  // 0 ~ 7
+    pub pitch_mod_sens: Depth,  // 0 ~ 7
 }
 
 impl Lfo {
@@ -1009,13 +1117,12 @@ impl Lfo {
             amd: Level::from(0),
             sync: true,
             wave: LfoWaveform::Triangle,
-            pitch_mod_sens: RangedValue::new_min(RangeKind::PitchModulationSensitivity),
+            pitch_mod_sens: Depth::from(0),
         }
     }
 
     /// Makes a new LFO with random settings.
     pub fn new_random() -> Self {
-        let level = RangedValue::new_min(RangeKind::Level);
         Self {
             speed: Level::random_value(),
             delay: Level::random_value(),
@@ -1023,7 +1130,7 @@ impl Lfo {
             amd: Level::random_value(),
             sync: true,
             wave: LfoWaveform::Triangle,
-            pitch_mod_sens: RangedValue::from_int(RangeKind::PitchModulationSensitivity, level.random_value()),
+            pitch_mod_sens: Depth::random_value(),
         }
     }
 }
@@ -1048,7 +1155,30 @@ impl SystemExclusiveData for Lfo {
                     LfoWaveform::Triangle
                 }
             },
-            pitch_mod_sens: RangedValue::from_byte(RangeKind::PitchModulationSensitivity, data[6]),
+            pitch_mod_sens: Depth::from(data[6]),
+        }
+    }
+
+    fn from_packed_bytes(data: ByteVector) -> Self {
+        Lfo {
+            speed: Level::from(data[0]),
+            delay: Level::from(data[1]),
+            pmd: Level::from(data[2]),
+            amd: Level::from(data[3]),
+            sync: if data[4].bit(0) { true } else { false },
+            wave: match data[4].bit_range(1..4) {
+                0 => LfoWaveform::Triangle,
+                1 => LfoWaveform::SawDown,
+                2 => LfoWaveform::SawUp,
+                3 => LfoWaveform::Square,
+                4 => LfoWaveform::Sine,
+                5 => LfoWaveform::SampleAndHold,
+                _ => {
+                    warn!("LFO waveform out of range: {}, setting to TRI", data[4]);
+                    LfoWaveform::Triangle
+                }
+            },
+            pitch_mod_sens: Depth::from(data[4].bit_range(4..7)),
         }
     }
 
@@ -1065,8 +1195,8 @@ impl SystemExclusiveData for Lfo {
     }
 
     fn to_packed_bytes(&self) -> ByteVector {
-        let mut b116: u8 = if self.sync { 1 } else { 0 };
-        b116.set_bit_range(1..4, self.wave as u8);
+        let mut b116: Byte = if self.sync { 1 } else { 0 };
+        b116.set_bit_range(1..4, self.wave as Byte);
         b116.set_bit_range(4..7, self.pitch_mod_sens.as_byte());
 
         vec![
@@ -1126,6 +1256,12 @@ impl Voice {
     }
 }
 
+impl Default for Voice {
+    fn default() -> Self {
+        Voice::new()
+    }
+}
+
 impl SystemExclusiveData for Voice {
     fn from_bytes(data: ByteVector) -> Self {
         Voice {
@@ -1146,8 +1282,27 @@ impl SystemExclusiveData for Voice {
         }
     }
 
+    fn from_packed_bytes(data: ByteVector) -> Self {
+        Voice {
+            op6: Operator::from_packed_bytes(data[0..17].to_vec()),
+            op5: Operator::from_packed_bytes(data[17..34].to_vec()),
+            op4: Operator::from_packed_bytes(data[34..51].to_vec()),
+            op3: Operator::from_packed_bytes(data[51..68].to_vec()),
+            op2: Operator::from_packed_bytes(data[68..85].to_vec()),
+            op1: Operator::from_packed_bytes(data[85..102].to_vec()),
+            peg: Envelope::from_packed_bytes(data[102..110].to_vec()),
+            alg: Algorithm::from(data[110]),
+            feedback: data[111].bit_range(0..5),
+            osc_sync: if data[111].bit(3) { true } else { false },
+            lfo: Lfo::from_packed_bytes(data[112..117].to_vec()),
+            transpose: data[117],
+            name: String::from_utf8(data[118..128].to_vec()).unwrap(),
+            op_flags: [true; 6],
+        }
+    }
+
     fn to_bytes(&self) -> ByteVector {
-        let mut data: Vec<u8> = Vec::new();
+        let mut data: ByteVector = Vec::new();
 
         data.extend(self.op6.to_bytes());
         data.extend(self.op5.to_bytes());
@@ -1181,7 +1336,7 @@ impl SystemExclusiveData for Voice {
     }
 
     fn to_packed_bytes(&self) -> ByteVector {
-        let mut data: Vec<u8> = Vec::new();
+        let mut data: ByteVector = Vec::new();
 
         let op6_data = self.op6.to_packed_bytes();
         debug!("OP6: {} bytes, {:?}", op6_data.len(), op6_data);
@@ -1231,8 +1386,6 @@ impl SystemExclusiveData for Voice {
         debug!("  NAME: '{}'", padded_name);
         data.extend(padded_name.into_bytes());
 
-        assert_eq!(data.len(), 128);
-
         data
     }
 }
@@ -1241,6 +1394,15 @@ impl SystemExclusiveData for Voice {
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+
+    #[test]
+    fn test_bit_range() {
+        let b: u8 = 0b00110000;
+
+        // If this succeeds, the range upper bound is not included,
+        // i.e. 4..6 means bits 4 and 5.
+        assert_eq!(b.bit_range(4..6), 0b11);
+    }
 
     #[test]
     fn test_checksum() {
@@ -1326,9 +1488,9 @@ mod tests {
                 left_curve: ScalingCurve::exp_neg(),
                 right_curve: ScalingCurve::exp_neg(),
             },
-            kbd_rate_scaling: 4,
+            kbd_rate_scaling: Depth::from(4),
             amp_mod_sens: 0,
-            key_vel_sens: 2,
+            key_vel_sens: Depth::from(2),
             output_level: Level::from(82),
             mode: OperatorMode::Ratio,
             coarse: Coarse::from(1),
@@ -1337,7 +1499,6 @@ mod tests {
         };
 
         let data = op.to_packed_bytes();
-        assert_eq!(data.len(), 17);
 
         let expected_data = vec![0x31u8, 0x63, 0x1c, 0x44, 0x62, 0x62, 0x5b, 0x00, 0x27, 0x36, 0x32, 0x05, 0x3c, 0x08, 0x52, 0x02, 0x00];
 
@@ -1362,12 +1523,12 @@ mod tests {
             amd: Level::from(0),
             sync: false,
             wave: LfoWaveform::Sine,
-            pitch_mod_sens: RangedValue::from_int(RangeKind::PitchModulationSensitivity, 3),
+            pitch_mod_sens: Depth::from(3),
         };
 
         assert_eq!(
             lfo.to_packed_bytes(),
-            vec![37, 0, 5, 0, 0b11010000]
+            vec![37, 0, 5, 0, 0x38]
         );
     }
 
@@ -1416,7 +1577,7 @@ mod tests {
             None => println!("Vectors are the same")
         }
 
-        assert_eq!(brass1_data, voice_data);
+        assert_eq!(voice_data, brass1_data);
     }
 
     #[test]
@@ -1424,8 +1585,19 @@ mod tests {
         let sync = true;
         let feedback = 7u8;
         let expected = 0x0fu8;
-        let mut actual = feedback | ((if sync { 1 } else { 0 }) << 3);
+        let actual = feedback | ((if sync { 1 } else { 0 }) << 3);
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_bulk_b116() {
+        let sync = false;
+        let wave = LfoWaveform::Sine;
+        let pms = 3u8;
+        let mut actual: Byte = if sync { 1u8 } else { 0u8 };
+        actual.set_bit_range(1..4, wave as Byte);
+        actual.set_bit_range(4..7, pms);
+        assert_eq!(actual, 0x38);
     }
 
     #[test]
