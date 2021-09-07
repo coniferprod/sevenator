@@ -44,19 +44,6 @@ this makes the code significantly easier to read and write, compared to traditio
 zero-based array/vector indexing. It is more intuitive to write `op1.level` than
 `op[0].level`.
 
-### The `RangedValue` data type
-
-To make it easier to ensure that parameter values are restricted to the allowed range,
-and to be able to generate random parameter values (for metric parameters),
-the `RangedValue` data type is used, together with the `RangeKind` enum, which gives
-semantic meaning to the values. The `RangedValue` struct could use Rust's range, if not
-for the fact that [Rust ranges are not `Copy`](https://github.com/rust-lang/rfcs/issues/2848),
-so we can't pass `RangedValue` instances around casually if we use the standard range.
-That is why the `RangedValue` struct uses a wrapper type, `RangeInclusiveWrapper`. It wraps
-an `i16` value with the start and end of the allowable range. `i16` is used as the base
-type because it is the smallest data type that can fit all the metric parameter values
-(some of them extend to negative values).
-
 ### The newtype pattern
 
 The data types of some struct members are defined using the newtype pattern in Rust.
@@ -143,3 +130,27 @@ Packed data format:
     0x38,                    // LFO pitch mode sens, wave, sync
     0x18,                    // transpose
     0x42, 0x52, 0x41, 0x53, 0x53, 0x20, 0x20, 0x20, 0x31, 0x20,   // name (10 characters)
+
+Note that there seems to be an error in the DX7 packed format description.
+I couldn't have made this without that information, but the packed LFO caused
+some trouble. The document states describes byte 116 of the packed format like this:
+
+    byte             bit #
+    #     6   5   4   3   2   1   0   param A       range  param B       range
+    ----  --- --- --- --- --- --- ---  ------------  -----  ------------  -----
+    116  |  LPMS |      LFW      |LKS| LF PT MOD SNS 0-7   WAVE 0-5,  SYNC 0-1
+
+Actually it seems to be like this:
+
+    byte             bit #
+    #     6   5   4   3   2   1   0   param A       range  param B       range
+    ----  --- --- --- --- --- --- ---  ------------  -----  ------------  -----
+    116  |   LPMS    |  LFW      |LKS| LF PT MOD SNS 0-7   WAVE 0-5,  SYNC 0-1
+
+The LFO pitch modulation sensitivity value (three bits, 0...7) is in bits 4...6,
+and the LFO waveform (four bits, 0...5) is in bits 1...3.
+
+I cross-checked this with the "BRASS 1" patch from the original ROM1 cartridge data.
+The corresponding byte in the original data is 0x38 = 0b00111000, which parses to
+sync = false, LFO waveform = 4 or sine, and pitch mod sens = 3. These match the
+patch chart on page 28 of the DX7 Operating Manual.
