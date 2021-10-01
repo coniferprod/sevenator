@@ -1,13 +1,13 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::fmt;
-use std::ops::RangeInclusive;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::convert::TryInto;
 use log::{info, warn, error, debug};
 use rand::Rng;
 use num;
 use bit::BitIndex;
+//use crate::Command;
 
 type Byte = u8;
 type ByteVector = Vec<u8>;
@@ -504,20 +504,7 @@ fn make_random_cartridge() -> Cartridge {
     }
 }
 
-/// Runs the cartridge generation routine.
-pub fn run() -> std::io::Result<()> {
-    // Show the ROM1 cartridge contents (just for testing):
-    let rom1a_data: [u8; 4096] = include!("rom1asyx.in");
-    let rom1a_cartridge = Cartridge::from_packed_bytes(rom1a_data.to_vec());
-    for voice in rom1a_cartridge.voices.iter() {
-        println!("{}", voice.name);
-    }
-
-    // Get the default voice with `Voice::new()`.
-    // The `make_init_voice()` function makes exactly the original init voice.
-    // These should be more or less the same.
-    //let cartridge: Cartridge = Default::default();
-
+pub fn generate(output_filename: String) -> std::io::Result<()> {
     // Make a cartridge full of random voices
     let cartridge = make_random_cartridge();
 
@@ -550,17 +537,61 @@ pub fn run() -> std::io::Result<()> {
     // Add the System Exclusive message terminator:
     cartridge_data.push(0xf7u8);
 
-    let now = SystemTime::now();
-    let epoch_now = now
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-    let filename = format!("cartridge-{:?}.syx", epoch_now.as_secs());
-    {
-        let mut file = File::create(filename)?;
+    if output_filename == "" {
+        let now = SystemTime::now();
+        let epoch_now = now
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+        let filename = format!("cartridge-{:?}.syx", epoch_now.as_secs());
+        {
+            let mut file = File::create(filename)?;
+            file.write_all(&cartridge_data)?;
+        }
+    }
+    else {
+        let mut file = File::create(output_filename)?;
         file.write_all(&cartridge_data)?;
     }
 
     Ok(())
+}
+
+pub fn dump(input_filename: String) -> std::io::Result<()> {
+    let mut file = File::open(input_filename)?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+
+    let cartridge = Cartridge::from_packed_bytes(data);
+    for voice in cartridge.voices.iter() {
+        println!("{}", voice.name);
+    }
+
+    Ok(())
+}
+
+/// Runs the cartridge generation routine.
+pub fn run() -> std::io::Result<()> {
+    // Show the ROM1 cartridge contents (just for testing):
+    let rom1a_data: [u8; 4096] = include!("rom1asyx.in");
+    let rom1a_cartridge = Cartridge::from_packed_bytes(rom1a_data.to_vec());
+    for voice in rom1a_cartridge.voices.iter() {
+        println!("{}", voice.name);
+    }
+
+    Ok(())
+
+    /*
+    match command {
+        super::Command::Generate => generate(),
+        super::Command::Dump(input_filename) => dump(input_filename),
+        _ => Ok(())
+    }
+    */
+
+    // Get the default voice with `Voice::new()`.
+    // The `make_init_voice()` function makes exactly the original init voice.
+    // These should be more or less the same.
+    //let cartridge: Cartridge = Default::default();
 }
 
 /// Parsing and generating MIDI System Exclusive data.

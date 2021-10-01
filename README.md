@@ -47,7 +47,73 @@ zero-based array/vector indexing. It is more intuitive to write `op1.level` than
 ### The newtype pattern
 
 The data types of some struct members are defined using the newtype pattern in Rust.
-I hope to explain this better when the experiment is finished.
+
+Each voice parameter has an allowed range of values. For example, operator levels
+go from 0 to 99 inclusive, detune values are -7 to +7, and so on.
+
+To be able to catch or suppress errors in setting parameter values, I wanted to have
+a data type that would restrict its values to a given range, and possibly clamp any
+value that falls outside the range. Also, it would convenient to create random values
+for a parameter, and maybe also restrict those random values into a subrange.
+
+For this I couldn't use a primitive Rust data type, since the range of even the smallest
+integer type, `i8`, was larger than the smallest value range. (Of course it was close;
+you could use an `i8` or a `u8` type for the parameters, but you would need to handle
+the values that fall outside the range anyway).
+
+In Rust, a newtype is "a struct with a single component that you define to get stricter
+type checking" ("Programming Rust, 2nd Edition", p. 213). As with any struct, it is
+possible to define traits for the newtype. I defined a newtype for every relevant
+parameter value, such as `UnsignedLevel` and `Detune`, and defined a simple interface
+that allows me to make new values and retrieve them, and also get a byte representation
+for System Exclusive messages.
+
+For example, the value of the detune parameter ranges from -7 to 7. It is represented
+in System Exclusive messages as a value from 0 to 14. The single component of the newtype
+for `Detune` is an `i8`.
+
+### Wrapper
+
+The newtypes need a range for the allowed values. I could not use the standard Rust
+range, because it "is not `Copy`", meaning that it doesn't implement the `Copy` trait.
+Since I wanted to use these parameter values in structs that are `Copy`, I had to
+make my own wrapper type with the start and end of the allowed value range.
+
+The `Wrapper` type is generic:
+
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct Wrapper<T> where T: Ord {
+        start: T,
+        end: T,
+    }
+
+### Constructing parameter values
+
+Now, when I have newtype like `Detune`, I can implement a method that returns the
+range:
+
+    #[derive(Debug, Clone, Copy)]
+    pub struct Detune(i8);
+
+    impl Detune {
+        fn range() -> Wrapper<i8> {
+            Wrapper { start: -7, end: 7 }
+        }
+    }
+
+When a new `Detune` struct is constructed, the tentative value is checked against
+the range:
+
+    impl Detune {
+        pub fn new(value: i8) -> Detune {
+           let range = Detune::range();
+            Detune(num::clamp(value, range.start, range.end))
+        }
+    }
+
+If the value is out of range, it gets clamped, using the `clamp` function in the
+`num` crate.
+
 
 ## Patch data structure
 
