@@ -1,6 +1,5 @@
 use std::env;
 use std::io::Error;
-use std::path::PathBuf;
 
 mod dx7;
 

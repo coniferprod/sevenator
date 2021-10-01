@@ -7,7 +7,6 @@ use log::{info, warn, error, debug};
 use rand::Rng;
 use num;
 use bit::BitIndex;
-//use crate::Command;
 
 type Byte = u8;
 type ByteVector = Vec<u8>;
@@ -561,7 +560,7 @@ pub fn dump(input_filename: String) -> std::io::Result<()> {
     let mut data = Vec::new();
     file.read_to_end(&mut data)?;
 
-    let cartridge = Cartridge::from_packed_bytes(data);
+    let cartridge = Cartridge::from_packed_bytes(data[6..].to_vec());
     for voice in cartridge.voices.iter() {
         println!("{}", voice.name);
     }
@@ -579,14 +578,6 @@ pub fn run() -> std::io::Result<()> {
     }
 
     Ok(())
-
-    /*
-    match command {
-        super::Command::Generate => generate(),
-        super::Command::Dump(input_filename) => dump(input_filename),
-        _ => Ok(())
-    }
-    */
 
     // Get the default voice with `Voice::new()`.
     // The `make_init_voice()` function makes exactly the original init voice.
