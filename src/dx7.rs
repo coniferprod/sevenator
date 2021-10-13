@@ -431,7 +431,7 @@ fn make_random_voice() -> Voice {
         op5: make_random_operator(),
         op6: make_random_operator(),
         peg: Envelope::new_rate_level(Rates(99, 99, 99, 99), Levels(50, 50, 50, 50)),
-        alg: Algorithm::from(1),
+        alg: Algorithm::random_value(),
         feedback: 0,
         osc_sync: true, // osc key sync = on
         lfo: Lfo::new_random(),
@@ -498,9 +498,11 @@ impl SystemExclusiveData for Cartridge {
 
 // Makes a cartridge filled with random voices.
 fn make_random_cartridge() -> Cartridge {
-    Cartridge {
-        voices: vec![make_random_voice(); VOICE_COUNT],
+    let mut voices: Vec<Voice> = Vec::new();
+    for i in 0..VOICE_COUNT {
+        voices.push(make_random_voice());
     }
+    Cartridge { voices }
 }
 
 pub fn generate(output_filename: String) -> std::io::Result<()> {
@@ -562,7 +564,7 @@ pub fn dump(input_filename: String) -> std::io::Result<()> {
 
     let cartridge = Cartridge::from_packed_bytes(data[6..].to_vec());
     for voice in cartridge.voices.iter() {
-        println!("{}", voice.name);
+        println!("{}", voice);
     }
 
     Ok(())
@@ -704,6 +706,15 @@ pub enum CurveStyle {
     Exponential
 }
 
+impl fmt::Display for CurveStyle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            CurveStyle::Linear => write!(f, "LIN"),
+            CurveStyle::Exponential => write!(f, "EXP"),
+        }
+    }
+}
+
 /// Scaling curve settings.
 #[derive(Debug, Clone, Copy)]
 pub struct ScalingCurve {
@@ -732,6 +743,17 @@ impl ScalingCurve {
         ScalingCurve { curve: CurveStyle::Exponential, positive: false }
     }
 
+    /// Makes a scaling curve from a System Exclusive data byte.
+    pub fn from_byte(b: Byte) -> Self {
+        match b {
+            0 => ScalingCurve::lin_neg(),
+            1 => ScalingCurve::exp_neg(),
+            2 => ScalingCurve::exp_pos(),
+            3 => ScalingCurve::lin_pos(),
+            _ => ScalingCurve::lin_pos(),
+        }
+    }
+
     /// Gets the SysEx bytes for this scaling curve.
     pub fn to_bytes(&self) -> Byte {
         match self {
@@ -740,6 +762,12 @@ impl ScalingCurve {
             ScalingCurve { curve: CurveStyle::Exponential, positive: true } => 2,
             ScalingCurve { curve: CurveStyle::Exponential, positive: false } => 1,
         }
+    }
+}
+
+impl fmt::Display for ScalingCurve {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.curve, if self.positive { "+" } else { "-" })
     }
 }
 
@@ -779,26 +807,20 @@ impl SystemExclusiveData for KeyboardLevelScaling {
             breakpoint: data[0],
             left_depth: data[1],
             right_depth: data[2],
-            left_curve: match data[3] {
-                0 => ScalingCurve::lin_neg(),
-                1 => ScalingCurve::exp_neg(),
-                2 => ScalingCurve::exp_pos(),
-                3 => ScalingCurve::lin_pos(),
-                _ => ScalingCurve::lin_pos(),
-            },
-            right_curve: match data[3] {
-                0 => ScalingCurve::lin_neg(),
-                1 => ScalingCurve::exp_neg(),
-                2 => ScalingCurve::exp_pos(),
-                3 => ScalingCurve::lin_pos(),
-                _ => ScalingCurve::lin_pos(),
-            },
+            left_curve: ScalingCurve::from_byte(data[3]),
+            right_curve: ScalingCurve::from_byte(data[4]),
         }
     }
 
     /// Makes new keyboard level scaling settings from packed SysEx bytes.
     fn from_packed_bytes(data: ByteVector) -> Self {
-        KeyboardLevelScaling::from_bytes(data)
+        Self {
+            breakpoint: data[0],
+            left_depth: data[1],
+            right_depth: data[2],
+            left_curve: ScalingCurve::from_byte(data[3] >> 4),
+            right_curve: ScalingCurve::from_byte(data[3] & 0x0f),
+        }
     }
 
     /// Gets the SysEx bytes representing this set of parameters.
@@ -820,6 +842,13 @@ impl SystemExclusiveData for KeyboardLevelScaling {
             self.right_depth,
             self.left_curve.to_bytes() | (self.right_curve.to_bytes() << 2),
         ]
+    }
+}
+
+impl fmt::Display for KeyboardLevelScaling {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "breakpoint = {}, left depth = {}, right depth = {}, left curve = {}, right curve = {}",
+            self.breakpoint, self.left_depth, self.right_depth, self.left_curve, self.right_curve)
     }
 }
 
@@ -952,6 +981,20 @@ impl SystemExclusiveData for Operator {
     }
 }
 
+impl fmt::Display for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,"EG: {}
+Kbd level scaling: {}, Kbd rate scaling: {}
+Amp mod sens = {}, Key vel sens = {}
+Level = {}, Mode = {:?}
+Coarse = {}, Fine = {}, Detune = {}
+",
+            self.eg, self.kbd_level_scaling, self.kbd_rate_scaling.value(),
+            self.amp_mod_sens, self.key_vel_sens.value(), self.output_level.value(), self.mode,
+            self.coarse.value(), self.fine.value(), self.detune.value())
+    }
+}
+
 /// LFO waveform.
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
@@ -1075,6 +1118,14 @@ impl SystemExclusiveData for Lfo {
             self.amd.as_byte(),
             b116,
         ]
+    }
+}
+
+impl fmt::Display for Lfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "speed = {}, delay = {}, PMD = {}, AMD = {}, sync = {}, wave = {:?}, pitch mod sens = {}",
+            self.speed.value(), self.delay.value(), self.pmd.value(), self.amd.value(),
+            self.sync, self.wave, self.pitch_mod_sens.value())
     }
 }
 
@@ -1256,6 +1307,27 @@ impl SystemExclusiveData for Voice {
         data.extend(padded_name.into_bytes());
 
         data
+    }
+}
+
+impl fmt::Display for Voice {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "==========
+{}
+==========
+OP1: {}
+OP2: {}
+OP3: {}
+OP4: {}
+OP5: {}
+OP6: {}
+PEG: {}
+ALG: {}, feedback = {}, osc sync = {}
+LFO: {}
+Transpose: {}
+",
+            self.name, self.op1, self.op2, self.op3, self.op4, self.op5, self.op6, self.peg,
+            self.alg.value(), self.feedback, self.osc_sync, self.lfo, self.transpose)
     }
 }
 
