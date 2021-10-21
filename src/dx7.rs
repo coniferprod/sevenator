@@ -323,7 +323,7 @@ fn make_brass1() -> Voice {
         op1, op2, op3, op4, op5, op6,
         peg: Envelope::new_rate_level(Rates(84, 95, 95, 60), Levels(50, 50, 50, 50)),
         alg: Algorithm::from(22),
-        feedback: 7,
+        feedback: Depth::from(7),
         osc_sync: true,
         lfo: Lfo {
             speed: Level::from(37),
@@ -334,7 +334,7 @@ fn make_brass1() -> Voice {
             wave: LfoWaveform::Sine,
             pitch_mod_sens: Depth::from(3),
         },
-        transpose: 24,
+        transpose: Transpose::from(0),
         name: "BRASS   1 ".to_string(),
         op_flags: [true, true, true, true, true, true],
     }
@@ -374,7 +374,7 @@ fn make_init_voice() -> Voice {
         op6: init_op_rest.clone(),
         peg: Envelope::new_rate_level(Rates(99, 99, 99, 99), Levels(50, 50, 50, 50)),
         alg: Algorithm::from(1),
-        feedback: 0,
+        feedback: Depth::from(0),
         osc_sync: true, // osc key sync = on
         lfo: Lfo {
             speed: Level::from(35),
@@ -385,7 +385,7 @@ fn make_init_voice() -> Voice {
             wave: LfoWaveform::Triangle,
             pitch_mod_sens: Depth::from(3),
         },
-        transpose: 24,
+        transpose: Transpose::from(0),
         name: "INIT VOICE".to_string(),
         op_flags: [true, true, true, true, true, true],  // all operators ON
     }
@@ -432,10 +432,10 @@ fn make_random_voice() -> Voice {
         op6: make_random_operator(),
         peg: Envelope::new_rate_level(Rates(99, 99, 99, 99), Levels(50, 50, 50, 50)),
         alg: Algorithm::random_value(),
-        feedback: 0,
+        feedback: Depth::from(0),
         osc_sync: true, // osc key sync = on
         lfo: Lfo::new_random(),
-        transpose: 24,
+        transpose: Transpose::from(0),
         name: "RNDM VOICE".to_string(),
         op_flags: [true, true, true, true, true, true],  // all operators ON
     }
@@ -1129,6 +1129,46 @@ impl fmt::Display for Lfo {
     }
 }
 
+/// Key transpose in octaves (-2...2).
+#[derive(Debug, Clone, Copy)]
+pub struct Transpose(i8);
+
+impl Transpose {
+    fn range() -> Wrapper<i8> {
+        Wrapper { start: -2, end: 2 }
+    }
+
+    pub fn new(value: i8) -> Transpose {
+        let range = Transpose::range();
+        Transpose(num::clamp(value, range.start, range.end))
+    }
+
+    pub fn as_byte(&self) -> Byte {
+        // Convert to the range 0...48
+        (self.0 + 2) as u8 * 12
+    }
+
+    pub fn value(&self) -> i8 {
+        self.0
+    }
+}
+
+impl From<i8> for Transpose {
+    fn from(value: i8) -> Transpose {
+        Transpose::new(value)
+    }
+}
+
+impl Transpose {
+    /// Makes a key transpose from a System Exclusive data byte.
+    pub fn from_byte(b: Byte) -> Self {
+        // SysEx value is 0...48, corresponding to four octaves (with 12 semitones each):
+        // 0 = -2
+        let semitones: i8 = b as i8 - 24;  // bring to range -24...24
+        Transpose::new(semitones / 12)
+    }
+}
+
 /// Voice.
 #[derive(Debug, Clone)]
 pub struct Voice {
@@ -1140,10 +1180,10 @@ pub struct Voice {
     pub op6: Operator,
     pub peg: Envelope,  // pitch env
     pub alg: Algorithm,  // 1...32
-    pub feedback: u8,
+    pub feedback: Depth,
     pub osc_sync: bool,
     pub lfo: Lfo,
-    pub transpose: u8,  // +/- 2 octaves (12 = C2  (value is 0~48 in SysEx))
+    pub transpose: Transpose,  // number of octaves to transpose (-2...+2) (12 = C2 (value is 0~48 in SysEx))
     pub name: String,
     pub op_flags: [bool; 6],
 }
@@ -1166,10 +1206,10 @@ impl Voice {
                 ..Envelope::new()
             },
             alg: Algorithm::from(1),
-            feedback: 0,
+            feedback: Depth::from(0),
             osc_sync: true,
             lfo: Lfo::new(),
-            transpose: 24,
+            transpose: Transpose::from(0),
             name: "INIT VOICE".to_string(),
             op_flags: [true, true, true, true, true, true],
         }
@@ -1193,10 +1233,10 @@ impl SystemExclusiveData for Voice {
             op1: Operator::from_bytes(data[108..126].to_vec()),
             peg: Envelope::from_bytes(data[126..134].to_vec()),
             alg: Algorithm::from(data[134]),
-            feedback: data[135],
+            feedback: Depth::from(data[135]),
             osc_sync: if data[136] == 1 { true } else { false },
             lfo: Lfo::from_bytes(data[137..144].to_vec()),
-            transpose: data[144],
+            transpose: Transpose::from_byte(data[144]),
             name: String::from_utf8(data[145..155].to_vec()).unwrap(),
             op_flags: [data[155].bit(5), data[155].bit(4), data[155].bit(3), data[155].bit(2), data[155].bit(1), data[155].bit(0),]
         }
@@ -1212,10 +1252,10 @@ impl SystemExclusiveData for Voice {
             op1: Operator::from_packed_bytes(data[85..102].to_vec()),
             peg: Envelope::from_packed_bytes(data[102..110].to_vec()),
             alg: Algorithm::from(data[110]),
-            feedback: data[111].bit_range(0..5),
+            feedback: Depth::from(data[111].bit_range(0..5)),
             osc_sync: if data[111].bit(3) { true } else { false },
             lfo: Lfo::from_packed_bytes(data[112..117].to_vec()),
-            transpose: data[117],
+            transpose: Transpose::from_byte(data[117]),
             name: String::from_utf8(data[118..128].to_vec()).unwrap(),
             op_flags: [true; 6],
         }
@@ -1234,10 +1274,10 @@ impl SystemExclusiveData for Voice {
         data.extend(self.peg.to_bytes());
 
         data.push((self.alg.value() - 1).try_into().unwrap());  // adjust alg# for SysEx
-        data.push(self.feedback);
+        data.push(self.feedback.as_byte());
         data.push(if self.osc_sync { 1 } else { 0 });
         data.extend(self.lfo.to_bytes());
-        data.push(self.transpose);
+        data.push(self.transpose.as_byte());
 
         let padded_name = format!("{:<10}", self.name);
         data.extend(padded_name.into_bytes());
@@ -1290,7 +1330,7 @@ impl SystemExclusiveData for Voice {
         data.push((algorithm - 1).try_into().unwrap());  // bring alg to range 0...31
         debug!("ALG: {}", algorithm);
 
-        let byte111 = self.feedback | ((if self.osc_sync { 1 } else { 0 }) << 3);
+        let byte111 = self.feedback.as_byte() | ((if self.osc_sync { 1 } else { 0 }) << 3);
         data.push(byte111);
         debug!("  b111: {:#08b}", byte111);
 
@@ -1299,8 +1339,8 @@ impl SystemExclusiveData for Voice {
         debug!("LFO: {} bytes, {:?}", lfo_data.len(), lfo_data);
         data.extend(lfo_data);
 
-        data.push(self.transpose);
-        debug!("  TRNSP: {:#02X}", self.transpose);
+        data.push(self.transpose.as_byte());
+        debug!("  TRNSP: {:#02X}", self.transpose.value());
 
         let padded_name = format!("{:<10}", self.name);
         debug!("  NAME: '{}'", padded_name);
@@ -1327,7 +1367,7 @@ LFO: {}
 Transpose: {}
 ",
             self.name, self.op1, self.op2, self.op3, self.op4, self.op5, self.op6, self.peg,
-            self.alg.value(), self.feedback, self.osc_sync, self.lfo, self.transpose)
+            self.alg.value(), self.feedback.value(), self.osc_sync, self.lfo, self.transpose.value())
     }
 }
 
@@ -1557,6 +1597,20 @@ mod tests {
     fn test_unsigned_level_default() {
         let level = UnsignedLevel::default();  // based on u8
         assert_eq!(level, UnsignedLevel::from(0));  // so should be the u8 Default
+    }
+
+    #[test]
+    fn test_transpose_from_byte() {
+        let transpose_zero = Transpose::from_byte(24);
+        assert_eq!(transpose_zero.value(), 0);
+        let transpose_minus_one = Transpose::from_byte(12);
+        assert_eq!(transpose_minus_one.value(), -1);
+    }
+
+    #[test]
+    fn test_transpose_as_byte() {
+        let transpose_plus_one = Transpose::from(1);
+        assert_eq!(transpose_plus_one.as_byte(), 36);
     }
 }
 
