@@ -116,6 +116,12 @@ impl RandomValue for Algorithm {
     }
 }
 
+impl fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#{}:\n{}", self.value(), ALGORITHM_DIAGRAMS[(self.value() as usize) - 1])
+    }
+}
+
 /// Detune (-7...+7), represented in SysEx as 0...14.
 #[derive(Debug, Clone, Copy)]
 pub struct Detune(i8);
@@ -557,14 +563,22 @@ pub fn generate(output_filename: String) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn dump(input_filename: String) -> std::io::Result<()> {
+/// Dumps the contents of the file. It is assumed to be a cartridge,
+/// so it must contain packed voice data. Voice number is 1...32.
+pub fn dump(input_filename: String, voice_number: u32) -> std::io::Result<()> {
     let mut file = File::open(input_filename)?;
     let mut data = Vec::new();
     file.read_to_end(&mut data)?;
 
     let cartridge = Cartridge::from_packed_bytes(data[6..].to_vec());
-    for voice in cartridge.voices.iter() {
-        println!("{}", voice);
+    if voice_number == 0 {
+        for voice in cartridge.voices.iter() {
+            println!("{}", voice);
+        }
+    }
+    else {
+        let voice_number = voice_number - 1;
+        println!("{}", cartridge.voices[voice_number as usize]);
     }
 
     Ok(())
@@ -1367,7 +1381,7 @@ LFO: {}
 Transpose: {}
 ",
             self.name, self.op1, self.op2, self.op3, self.op4, self.op5, self.op6, self.peg,
-            self.alg.value(), self.feedback.value(), self.osc_sync, self.lfo, self.transpose.value())
+            self.alg, self.feedback.value(), self.osc_sync, self.lfo, self.transpose.value())
     }
 }
 
@@ -1626,3 +1640,5 @@ fn voice_checksum(data: &Vec<u8>) -> u8 {
     checksum += 1;
     checksum
 }
+
+pub static ALGORITHM_DIAGRAMS: [&str; 32] = include!("algorithms.in");
