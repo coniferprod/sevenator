@@ -511,7 +511,37 @@ fn make_random_cartridge() -> Cartridge {
     Cartridge { voices }
 }
 
-pub fn generate(output_filename: String) -> std::io::Result<()> {
+pub fn generate_voice(output_filename: String) -> std::io::Result<()> {
+    let voice = make_random_voice();
+    let voice_data = voice.to_bytes();
+    println!("voice data length = {}", voice_data.len());
+    let checksum = voice_checksum(&voice_data);
+
+    let mut output = vec![];
+
+    let header = vec![
+        0xf0u8, // SysEx initiator
+        0x43,   // Yamaha manufacturer ID
+        0x00,   // MIDI channel 1
+        0x00,   // format = 0 (1 voice)
+        0x00,   // byte count MSB
+        155,   // byte count LSB
+    ];
+
+    output.extend(header);
+    output.extend(voice_data);
+    output.push(checksum);
+    output.push(0xf7u8);  // SysEx terminator
+
+    {
+        let mut file = File::create(output_filename)?;
+        file.write_all(&output)?;
+    }
+
+    Ok(())
+}
+
+pub fn generate_cartridge(output_filename: String) -> std::io::Result<()> {
     // Make a cartridge full of random voices
     let cartridge = make_random_cartridge();
 
@@ -1296,6 +1326,11 @@ impl SystemExclusiveData for Voice {
         let padded_name = format!("{:<10}", self.name);
         data.extend(padded_name.into_bytes());
 
+        // "The OPERATOR ON/OFF parameter is not stored with the
+        // voice, and is only transmitted or received while editing a voice.
+        // So it only shows up in parameter change SYS-EX's."
+        // Source: dx7sysexformat.txt
+        /*
         let mut rev_flags = self.op_flags;
         rev_flags.reverse();
         let mut flags: u8 = 0;
@@ -1305,6 +1340,9 @@ impl SystemExclusiveData for Voice {
             }
         }
         data.push(flags);
+        */
+
+        assert_eq!(data.len(), 155);
 
         data
     }
