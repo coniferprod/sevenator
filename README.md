@@ -220,3 +220,7 @@ I cross-checked this with the "BRASS 1" patch from the original ROM1 cartridge d
 The corresponding byte in the original data is 0x38 = 0b00111000, which parses to
 sync = false, LFO waveform = 4 or sine, and pitch mod sens = 3. These match the
 patch chart on page 28 of the DX7 Operating Manual.
+
+## Yamaha TX802 notes
+
+The Yamaha TX802 voice buffer accepts single voices in DX7 format.
