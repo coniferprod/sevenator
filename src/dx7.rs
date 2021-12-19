@@ -511,10 +511,8 @@ fn make_random_cartridge() -> Cartridge {
     Cartridge { voices }
 }
 
-pub fn generate_voice(output_filename: String) -> std::io::Result<()> {
-    let voice = make_random_voice();
+fn generate_voice(voice: Voice) -> ByteVector {
     let voice_data = voice.to_bytes();
-    println!("voice data length = {}", voice_data.len());
     let checksum = voice_checksum(&voice_data);
 
     let mut output = vec![];
@@ -532,6 +530,23 @@ pub fn generate_voice(output_filename: String) -> std::io::Result<()> {
     output.extend(voice_data);
     output.push(checksum);
     output.push(0xf7u8);  // SysEx terminator
+
+    output
+}
+
+pub fn generate_random_voice(output_filename: String) -> std::io::Result<()> {
+    let output = generate_voice(make_random_voice());
+
+    {
+        let mut file = File::create(output_filename)?;
+        file.write_all(&output)?;
+    }
+
+    Ok(())
+}
+
+pub fn generate_init_voice(output_filename: String) -> std::io::Result<()> {
+    let output = generate_voice(make_init_voice());
 
     {
         let mut file = File::create(output_filename)?;

@@ -53,11 +53,14 @@ fn main() -> Result<(), Error> {
     match config.command.as_str() {
         "dump" => dx7::dump(config.filename.unwrap(), match config.voice_number { None => 0, Some(n) => n }),
         "generate" => match config.target.as_str() {
-            "voice" => {
-                dx7::generate_voice(config.filename.unwrap())
+            "randomvoice" => {
+                dx7::generate_random_voice(config.filename.unwrap())
             },
             "cartridge" => {
                 dx7::generate_cartridge(config.filename.unwrap())
+            },
+            "initvoice" => {
+                dx7::generate_init_voice(config.filename.unwrap())
             },
             _ => {
                 eprintln!("Unknown target: {}", config.target);
