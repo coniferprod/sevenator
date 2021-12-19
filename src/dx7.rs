@@ -524,8 +524,8 @@ pub fn generate_voice(output_filename: String) -> std::io::Result<()> {
         0x43,   // Yamaha manufacturer ID
         0x00,   // MIDI channel 1
         0x00,   // format = 0 (1 voice)
-        0x00,   // byte count MSB
-        155,   // byte count LSB
+        0x01,   // byte count MSB
+        0x1B,   // byte count LSB
     ];
 
     output.extend(header);
@@ -593,22 +593,29 @@ pub fn generate_cartridge(output_filename: String) -> std::io::Result<()> {
     Ok(())
 }
 
-/// Dumps the contents of the file. It is assumed to be a cartridge,
-/// so it must contain packed voice data. Voice number is 1...32.
+/// Dumps the contents of the file. It is assumed to be either a single voice,
+/// or a cartridge of 32 voices, based on the format byte at offset 3.
+/// Voice number is 1...32 for cartridges, ignored for single voices.
 pub fn dump(input_filename: String, voice_number: u32) -> std::io::Result<()> {
     let mut file = File::open(input_filename)?;
     let mut data = Vec::new();
     file.read_to_end(&mut data)?;
 
-    let cartridge = Cartridge::from_packed_bytes(data[6..].to_vec());
-    if voice_number == 0 {
-        for voice in cartridge.voices.iter() {
-            println!("{}", voice);
-        }
+    if data[3] == 0x00 {  // single voice
+        let voice = Voice::from_bytes(data[6..].to_vec());
+        println!("{}", voice);
     }
-    else {
-        let voice_number = voice_number - 1;
-        println!("{}", cartridge.voices[voice_number as usize]);
+    else if data[3] == 0x09 { // cartridge of 32 voices
+        let cartridge = Cartridge::from_packed_bytes(data[6..].to_vec());
+        if voice_number == 0 {
+            for voice in cartridge.voices.iter() {
+                println!("{}", voice);
+            }
+        }
+        else {
+            let voice_number = voice_number - 1;
+            println!("{}", cartridge.voices[voice_number as usize]);
+        }
     }
 
     Ok(())
@@ -944,14 +951,14 @@ impl SystemExclusiveData for Operator {
         Self {
             eg: Envelope::from_bytes(eg_bytes.to_vec()),
             kbd_level_scaling: KeyboardLevelScaling::from_bytes(level_scaling_bytes.to_vec()),
-            kbd_rate_scaling: Depth::from(data[14]),
-            amp_mod_sens: data[15],
-            key_vel_sens: Depth::from(data[16]),
-            output_level: Level::from(data[17]),
-            mode: if data[18] == 0b1 { OperatorMode::Fixed } else { OperatorMode::Ratio },
-            coarse: Coarse::from(data[19]),
-            fine: Level::from(data[20]),
-            detune: Detune::from(data[21]),
+            kbd_rate_scaling: Depth::from(data[13]),
+            amp_mod_sens: data[14],
+            key_vel_sens: Depth::from(data[15]),
+            output_level: Level::from(data[16]),
+            mode: if data[17] == 0b1 { OperatorMode::Fixed } else { OperatorMode::Ratio },
+            coarse: Coarse::from(data[18]),
+            fine: Level::from(data[19]),
+            detune: Detune::from(data[20]),
         }
     }
 
@@ -1269,12 +1276,12 @@ impl Default for Voice {
 impl SystemExclusiveData for Voice {
     fn from_bytes(data: ByteVector) -> Self {
         Voice {
-            op6: Operator::from_bytes(data[0..21].to_vec()),
-            op5: Operator::from_bytes(data[21..42].to_vec()),
+            op6: Operator::from_bytes(data[0..22].to_vec()),
+            op5: Operator::from_bytes(data[21..43].to_vec()),
             op4: Operator::from_bytes(data[42..64].to_vec()),
-            op3: Operator::from_bytes(data[64..86].to_vec()),
-            op2: Operator::from_bytes(data[86..108].to_vec()),
-            op1: Operator::from_bytes(data[108..126].to_vec()),
+            op3: Operator::from_bytes(data[63..85].to_vec()),
+            op2: Operator::from_bytes(data[84..106].to_vec()),
+            op1: Operator::from_bytes(data[105..127].to_vec()),
             peg: Envelope::from_bytes(data[126..134].to_vec()),
             alg: Algorithm::from(data[134]),
             feedback: Depth::from(data[135]),
@@ -1282,7 +1289,8 @@ impl SystemExclusiveData for Voice {
             lfo: Lfo::from_bytes(data[137..144].to_vec()),
             transpose: Transpose::from_byte(data[144]),
             name: String::from_utf8(data[145..155].to_vec()).unwrap(),
-            op_flags: [data[155].bit(5), data[155].bit(4), data[155].bit(3), data[155].bit(2), data[155].bit(1), data[155].bit(0),]
+            /*op_flags: [data[155].bit(5), data[155].bit(4), data[155].bit(3), data[155].bit(2), data[155].bit(1), data[155].bit(0),]*/
+            op_flags: [true, true, true, true, true, true],
         }
     }
 
@@ -1611,6 +1619,48 @@ mod tests {
         }
 
         assert_eq!(voice_data, brass1_data);
+    }
+
+    #[test]
+    fn test_operator_from_bytes() {
+        let data = vec![
+            0x03u8, 0x47, 0x00, 0x03, 0x00, 0x07, 0x63, 0x23,  // rate and level
+            0x63, 0x57, 0x63, 0x63, 0x63,  // kbd level scaling
+            0x00, 0x00, 0x00,
+            0x11,  // output level
+            0x00,   // osc mode
+            0x00, 0x00, 0x00, // coarse, fine, detune
+        ];
+        assert_eq!(data.len(), 21);
+        let operator = Operator::from_bytes(data);
+        let coarse = operator.coarse;
+        assert_eq!(coarse.value(), 0);
+    }
+
+    #[test]
+    fn test_voice_from_bytes() {
+        let data: [u8; 155] = [
+            0x63, 0x63, 0x63, 0x63,
+            0x63, 0x63, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x57, 0x00, 0x0b, 0x00, 0x07, 0x63, 0x27, 0x63,
+            0x63, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x07, 0x41, 0x00, 0x00, 0x00, 0x07, 0x63, 0x27,
+            0x63, 0x63, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00,
+            0x00, 0x00, 0x00, 0x05, 0x58, 0x00, 0x08, 0x00, 0x07, 0x63,
+            0x20, 0x63, 0x57, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11,
+            0x00, 0x00, 0x00, 0x00, 0x03, 0x47, 0x00, 0x03, 0x00, 0x07,
+            0x63, 0x23, 0x63, 0x57, 0x63, 0x63, 0x63, 0x00, 0x00, 0x00,
+            0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5c, 0x00, 0x00, 0x00,
+            0x07, 0x63, 0x43, 0x1e, 0x57, 0x63, 0x5f, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x63, 0x00, 0x00,
+            0x00, 0x07, 0x63, 0x63, 0x63, 0x63, 0x32, 0x32, 0x32, 0x32,
+            0x0f, 0x05, 0x01, 0x23, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+            0x18, 0x47, 0x45, 0x54, 0x20, 0x46, 0x55, 0x4e, 0x4b, 0x59,
+            0x20,
+        ];
+
+        let voice = Voice::from_bytes(data.to_vec());
+        assert_eq!(voice.name, "GET FUNKY ");
     }
 
     #[test]
