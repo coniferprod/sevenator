@@ -80,6 +80,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
+name = "lazy_static"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+
+[[package]]
 name = "libc"
 version = "0.2.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -241,13 +247,25 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "sevenator"
-version = "0.9.1"
+version = "0.9.2"
 dependencies = [
  "bit",
  "env_logger",
  "log",
  "num",
  "rand",
+ "syxpack",
+]
+
+[[package]]
+name = "syxpack"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d5c951c76ca5c808c233bc47801a9a7395b3bcae50498318b138604c14dae9a"
+dependencies = [
+ "bit",
+ "lazy_static",
+ "log",
 ]
 
 [[package]]

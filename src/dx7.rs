@@ -7,6 +7,7 @@ use log::{info, warn, error, debug};
 use rand::Rng;
 use num;
 use bit::BitIndex;
+use syxpack::{Message, Manufacturer, ManufacturerId};
 
 type Byte = u8;
 type ByteVector = Vec<u8>;
@@ -515,23 +516,19 @@ fn generate_voice(voice: Voice) -> ByteVector {
     let voice_data = voice.to_bytes();
     let checksum = voice_checksum(&voice_data);
 
-    let mut output = vec![];
-
-    let header = vec![
-        0xf0u8, // SysEx initiator
-        0x43,   // Yamaha manufacturer ID
+    let mut payload = vec![
         0x00,   // MIDI channel 1
         0x00,   // format = 0 (1 voice)
         0x01,   // byte count MSB
         0x1B,   // byte count LSB
     ];
+    payload.extend(voice_data);
+    payload.push(checksum);
 
-    output.extend(header);
-    output.extend(voice_data);
-    output.push(checksum);
-    output.push(0xf7u8);  // SysEx terminator
-
-    output
+    Message::new_manufacturer(
+        Manufacturer::from_id(ManufacturerId::Standard(0x43)),
+        payload)
+    .to_bytes()
 }
 
 pub fn generate_random_voice(output_filename: String) -> std::io::Result<()> {
@@ -559,35 +556,22 @@ pub fn generate_init_voice(output_filename: String) -> std::io::Result<()> {
 pub fn generate_cartridge(output_filename: String) -> std::io::Result<()> {
     // Make a cartridge full of random voices
     let cartridge = make_random_cartridge();
-
-    let mut cartridge_data = cartridge.to_packed_bytes();
-
-    // Compute the checksum before we add the SysEx header and terminator,
-    // but don't add it yet -- only just before the terminator.
+    let cartridge_data = cartridge.to_packed_bytes();
     let cartridge_checksum = voice_checksum(&cartridge_data);
-    debug!("cartridge checksum = {:02X}h", cartridge_checksum);
+    //debug!("cartridge checksum = {:02X}h", cartridge_checksum);
 
-    // Insert the System Exclusive header at the beginning of the vector:
-    let header = vec![
-        0xf0u8, // SysEx initiator
-        0x43,   // Yamaha manufacturer ID
+    let mut payload = vec![
         0x00,   // MIDI channel 1
         0x09,   // format = 9 (32 voices)
         0x20,   // byte count MSB
         0x00,   // byte count LSB
     ];
-    debug!("header length = {} bytes", header.len());
-    // This may be a bit inefficient, but not too much.
-    // The last byte of the header goes first to 0, then the others follow.
-    for b in header.iter().rev() {
-        cartridge_data.insert(0, *b);
-    }
+    payload.extend(cartridge_data);
+    payload.push(cartridge_checksum);
 
-    // Now is the right time to append the checksum
-    cartridge_data.push(cartridge_checksum);
-
-    // Add the System Exclusive message terminator:
-    cartridge_data.push(0xf7u8);
+    let message = Message::new_manufacturer(
+        Manufacturer::from_id(ManufacturerId::Standard(0x43)),
+        payload);
 
     if output_filename == "" {
         let now = SystemTime::now();
@@ -597,12 +581,12 @@ pub fn generate_cartridge(output_filename: String) -> std::io::Result<()> {
         let filename = format!("cartridge-{:?}.syx", epoch_now.as_secs());
         {
             let mut file = File::create(filename)?;
-            file.write_all(&cartridge_data)?;
+            file.write_all(&message.to_bytes())?;
         }
     }
     else {
         let mut file = File::create(output_filename)?;
-        file.write_all(&cartridge_data)?;
+        file.write_all(&message.to_bytes())?;
     }
 
     Ok(())
