@@ -2,12 +2,16 @@
 
 DX7 cartridge generator tool
 
-Sevenator generates a set of 32 patches for the [Yamaha DX7](https://www.yamaha.com/en/about/design/synapses/id_009/)
+Sevenator generates a single voice or a "cartridge" of 32 patches
+for the [Yamaha DX7](https://www.yamaha.com/en/about/design/synapses/id_009/)
 as a bulk dump file in MIDI System Exclusive format. You can use it to generate patches for the
 original DX7 synthesizer and also emulations and/or clones, such as
-[Arturia DX7 V](https://www.arturia.com/dx7-v/overview),
-[Native Instruments FM8](https://www.native-instruments.com/en/products/komplete/synths/fm8/),
-or [Dexed](https://asb2m10.github.io/dexed/), just to name a few.
+
+* [Arturia DX7 V](https://www.arturia.com/dx7-v/overview),
+* [Native Instruments FM8](https://www.native-instruments.com/en/products/komplete/synths/fm8/),
+* [Dexed](https://asb2m10.github.io/dexed/)
+* [Plogue Chipsynth OPS7](https://www.plogue.com/products/chipsynth-ops7.html)
+
 The [KORG opsix](https://www.korg.com/us/products/synthesizers/opsix/) can also
 import DX7 bulk dump files by MIDI.
 
@@ -16,11 +20,11 @@ programs that generate patches in any way you can think of. For example, you
 can randomize every parameter, but you will get better results if you select
 a subset of the parameters to randomize.
 
-Currently Sevenator only generates a bank or "cartridge" with the same 32 patches
-repeated over, or with some random envelopes, but it may get some patch generation
-methods of its own as it
-is developed. The DX7 data model and API may also be split into a dedicated
-package, so that Sevenator will become just one client of the API.
+Currently Sevenator generates either a single voice (initialized to factory defaults, or
+completely random) or a "cartridge" with the same 32 patches
+repeated over, with some random envelopes, but it may get some patch generation
+methods of its own as it is developed. The DX7 data model and API may also be split
+into a dedicated package, which would make Sevenator just one client of the API.
 
 ## The Yamaha DX7 patch format
 
@@ -30,7 +34,8 @@ can be found in the [Dexed documentation](https://github.com/asb2m10/dexed/blob/
 
 The Yamaha DX7 cartridge data is 4,096 bytes long (not counting the System
 Exclusive header and terminator, which bring it up to 4,104 bytes). It contains
-packed data for 32 voices, so the data for one voice is 128 bytes.
+packed data for 32 voices, so the data for one voice is 128 bytes. An unpacked
+single voice is 155 bytes (with SysEx header 163 bytes).
 
 ## Rust considerations
 
@@ -198,7 +203,7 @@ Packed data format:
     0x42, 0x52, 0x41, 0x53, 0x53, 0x20, 0x20, 0x20, 0x31, 0x20,   // name (10 characters)
 
 Note that there seems to be an error in the DX7 packed format description.
-I couldn't have made this without that information, but the packed LFO caused
+I couldn't have made this without the information found therein, but the packed LFO caused
 some trouble. The document states describes byte 116 of the packed format like this:
 
     byte             bit #
@@ -223,4 +228,4 @@ patch chart on page 28 of the DX7 Operating Manual.
 
 ## Yamaha TX802 notes
 
-The Yamaha TX802 voice buffer accepts single voices in DX7 format.
+The Yamaha TX802 voice edit buffer accepts single voices in DX7 format.
