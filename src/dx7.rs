@@ -349,7 +349,7 @@ fn make_brass1() -> Voice {
 
 // Makes an initialized voice. The defaults are as described in
 // Howard Massey's "The Complete DX7", Appendix B.
-fn make_init_voice() -> Voice {
+pub fn make_init_voice() -> Voice {
     let init_eg = Envelope::new();
 
     let init_op1 = Operator {
@@ -397,6 +397,31 @@ fn make_init_voice() -> Voice {
         op_flags: [true, true, true, true, true, true],  // all operators ON
     }
 }
+
+pub fn make_example(name: &str) -> Voice {
+    match name {
+        "1_1" => example_1_1(),
+        _ => make_init_voice(),
+    }
+}
+
+fn example_1_1() -> Voice {
+    let mut voice = make_init_voice();
+
+    voice.alg = Algorithm::from(32);
+
+    voice.op1.output_level = Level::from(99);
+    voice.op2.output_level = Level::from(87);
+    voice.op3.output_level = Level::from(79);
+    voice.op4.output_level = Level::from(75);
+    voice.op5.output_level = Level::from(72);
+    voice.op6.output_level = Level::from(71);
+
+    // incomplete!
+
+    voice
+}
+
 
 // Makes a random envelope generator.
 fn make_random_eg() -> Envelope {
@@ -544,6 +569,17 @@ pub fn generate_random_voice(output_filename: String) -> std::io::Result<()> {
 
 pub fn generate_init_voice(output_filename: String) -> std::io::Result<()> {
     let output = generate_voice(make_init_voice());
+
+    {
+        let mut file = File::create(output_filename)?;
+        file.write_all(&output)?;
+    }
+
+    Ok(())
+}
+
+pub fn generate_example_voice(output_filename: String) -> std::io::Result<()> {
+    let output = generate_voice(make_example("1.1"));
 
     {
         let mut file = File::create(output_filename)?;

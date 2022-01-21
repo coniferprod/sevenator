@@ -62,6 +62,9 @@ fn main() -> Result<(), Error> {
             "initvoice" => {
                 dx7::generate_init_voice(config.filename.unwrap())
             },
+            "example" => {
+                dx7::generate_example_voice(config.filename.unwrap())
+            },
             _ => {
                 eprintln!("Unknown target: {}", config.target);
                 Ok(())
