@@ -3,6 +3,39 @@ use std::io::Error;
 
 mod dx7;
 
+pub type Byte = u8;
+pub type ByteVector = Vec<u8>;
+
+//
+// Experiment a little with the newtype pattern.
+// A newtype is a special case of a tuple struct,
+// with just one field.
+//
+
+// Simple private wrapper for an inclusive range of Ord types.
+// We need this because Rust ranges are not Copy
+// (see https://github.com/rust-lang/rfcs/issues/2848).
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+struct Wrapper<T> where T: Ord {
+    start: T,
+    end: T,
+}
+
+pub trait RandomValue {
+    type B;  // semantic type
+    type T;  // primitive value type
+    fn random_value() -> Self::B;
+}
+
+/// Parsing and generating MIDI System Exclusive data.
+pub trait SystemExclusiveData {
+    fn from_bytes(data: ByteVector) -> Self;
+    fn from_packed_bytes(data: ByteVector) -> Self;
+    fn to_bytes(&self) -> ByteVector;
+    fn to_packed_bytes(&self) -> ByteVector { vec![] }
+    fn data_size(&self) -> usize { 0 }
+}
+
 #[derive(Debug)]
 struct Config {
     command: String,
