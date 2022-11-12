@@ -61,11 +61,6 @@ a data type that would restrict its values to a given range, and possibly clamp 
 value that falls outside the range. Also, it would convenient to create random values
 for a parameter, and maybe also restrict those random values into a subrange.
 
-For this I couldn't use a primitive Rust data type, since the range of even the smallest
-integer type, `i8`, was larger than the smallest value range. (Of course it was close;
-you could use an `i8` or a `u8` type for the parameters, but you would need to handle
-the values that fall outside the range anyway).
-
 In Rust, a newtype is "a struct with a single component that you define to get stricter
 type checking" ("Programming Rust, 2nd Edition", p. 213). As with any struct, it is
 possible to define traits for the newtype. I defined a newtype for every relevant
@@ -73,24 +68,10 @@ parameter value, such as `UnsignedLevel` and `Detune`, and defined a simple inte
 that allows me to make new values and retrieve them, and also get a byte representation
 for System Exclusive messages.
 
-For example, the value of the detune parameter ranges from -7 to 7. It is represented
-in System Exclusive messages as a value from 0 to 14. The single component of the newtype
-for `Detune` is an `i8`.
-
-### Wrapper
-
-The newtypes need a range for the allowed values. I could not use the standard Rust
-range, because it "is not `Copy`", meaning that it doesn't implement the `Copy` trait.
-Since I wanted to use these parameter values in structs that are `Copy`, I had to
-make my own wrapper type with the start and end of the allowed value range.
-
-The `Wrapper` type is generic:
-
-    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-    struct Wrapper<T> where T: Ord {
-        start: T,
-        end: T,
-    }
+Each newtype is backed by an `i32` value. The parameter values would fit into an `i16`,
+but since `i32` is the integer type inferred by default, it is much more convenient
+to use. For example, the value of the detune parameter ranges from -7 to 7.
+It is represented in System Exclusive messages as a value from 0 to 14.
 
 ### Constructing parameter values
 
@@ -98,11 +79,11 @@ Now, when I have newtype like `Detune`, I can implement a method that returns th
 range:
 
     #[derive(Debug, Clone, Copy)]
-    pub struct Detune(i8);
+    pub struct Detune(i32);
 
     impl Detune {
-        fn range() -> Wrapper<i8> {
-            Wrapper { start: -7, end: 7 }
+        pub fn range() -> RangeInclusive<i32> {
+            RangeInclusive::new(-7, 7)
         }
     }
 
@@ -110,15 +91,30 @@ When a new `Detune` struct is constructed, the tentative value is checked agains
 the range:
 
     impl Detune {
-        pub fn new(value: i8) -> Detune {
-           let range = Detune::range();
-            Detune(num::clamp(value, range.start, range.end))
+        pub fn new(value: i32) -> Self {
+            let range = Detune::range();
+            if range.contains(&value) {
+                Detune(value)
+            }
+            else {
+                if Self::is_clamped() {
+                    Detune(num::clamp(value, *range.start(), *range.end()))
+                }
+                else {
+                    panic!("expected value in range {}...{}, got {}", *range.start(), *range.end(), value);
+                }
+            }
         }
     }
 
 If the value is out of range, it gets clamped, using the `clamp` function in the
-`num` crate.
+`num` crate. The clamping is controlled by the `is_clamped` function:
 
+    impl Detune {
+        pub fn is_clamped() -> bool {
+            return true
+        }
+    }
 
 ## Patch data structure
 
