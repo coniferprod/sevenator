@@ -11,6 +11,10 @@ use bit::BitIndex;
 use syxpack::{Message, Manufacturer};
 use crate::{Byte, ByteVector, RandomValue, SystemExclusiveData};
 
+// Experiment a little with the newtype pattern.
+// A newtype is a special case of a tuple struct,
+// with just one field.
+
 /// Base type for normal level (0...99)
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
 pub struct UnsignedLevel(i32);
