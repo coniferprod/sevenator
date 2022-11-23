@@ -11,42 +11,61 @@ use bit::BitIndex;
 use syxpack::{Message, Manufacturer};
 use crate::{Byte, ByteVector, RandomValue, SystemExclusiveData};
 
+/// Helper function to make a random value that is inside a range.
+pub fn get_random_value(range: RangeInclusive<i32>) -> i32 {
+    let mut rng = rand::thread_rng();
+    rng.gen_range(*range.start() ..= *range.end())
+}
+
+/// Trait to represent a subrange type based on i32.
+pub trait Subrange {
+    // Use associated consts to define the subrange.
+    // Each type that has this trait is supposed to define these.
+    const MINIMUM_VALUE: i32;
+    const MAXIMUM_VALUE: i32;
+    const DEFAULT_VALUE: i32;
+
+    fn new(value: i32) -> Self;  // create with new initial value
+    fn get_value(&self) -> i32;  // get current value (immutable)
+
+    // Use a default method in the trait to generate a range
+    // based on the minimum and maximum values.
+    fn get_range() -> RangeInclusive<i32> {
+        RangeInclusive::new(Self::MINIMUM_VALUE, Self::MAXIMUM_VALUE)
+    }
+}
+
 // Experiment a little with the newtype pattern.
 // A newtype is a special case of a tuple struct,
 // with just one field.
 
 /// Base type for normal level (0...99)
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct UnsignedLevel(i32);
 
-impl UnsignedLevel {
-    pub fn range() -> RangeInclusive<i32> {
-        RangeInclusive::new(0, 99)
-    }
+impl Subrange for UnsignedLevel {
+    const MINIMUM_VALUE: i32 = 0;
+    const MAXIMUM_VALUE: i32 = 99;
+    const DEFAULT_VALUE: i32 = 0;
 
-    pub fn is_clamped() -> bool {
-        return true
-    }
-
-    pub fn new(value: i32) -> Self {
-        let range = UnsignedLevel::range();
+    fn new(value: i32) -> Self {
+        let range = Self::get_range();
         if range.contains(&value) {
-            UnsignedLevel(value)
+            Self(value)
         }
         else {
-            if Self::is_clamped() {
-                UnsignedLevel(num::clamp(value, *range.start(), *range.end()))
-            }
-            else {
-                panic!("expected value in range {}...{}, got {}", *range.start(), *range.end(), value);
-            }
+            panic!("expected value in range {}...{}, got {}",
+                *range.start(), *range.end(), value);
         }
     }
 
-    pub fn value(&self) -> i32 {
+    fn get_value(&self) -> i32 {
+        assert!(UnsignedLevel::get_range().contains(&self.0));
         self.0
     }
+}
 
+impl UnsignedLevel {
     pub fn as_byte(&self) -> u8 {
         self.0 as u8
     }
@@ -60,53 +79,57 @@ impl From<u8> for UnsignedLevel {
 
 impl RandomValue for UnsignedLevel {
     type B = UnsignedLevel;
-    type T = i32;
 
     fn random_value() -> Self::B {
-        let mut rng = rand::thread_rng();
-        let range = Self::B::range();
-        Self::B::new(rng.gen_range(*range.start() ..= *range.end()))
+        Self::B::new(get_random_value(Self::B::get_range()))
+    }
+}
+
+impl Default for UnsignedLevel {
+    fn default() -> UnsignedLevel {
+        UnsignedLevel::new(Self::DEFAULT_VALUE)
     }
 }
 
 // Semantic type aliases based on unsigned level:
-type Level = UnsignedLevel;  // envelope level or operator output level
-type Rate = UnsignedLevel; // envelope rate
+pub type Level = UnsignedLevel;  // envelope level or operator output level
+pub type Rate = UnsignedLevel; // envelope rate
 
 /// Algorithm (1...32)
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Algorithm(i32);
 
-impl Algorithm {
-    pub fn range() -> RangeInclusive<i32> {
-        RangeInclusive::new(1, 32)
-    }
+impl Subrange for Algorithm {
+    const MINIMUM_VALUE: i32 = 1;
+    const MAXIMUM_VALUE: i32 = 32;
+    const DEFAULT_VALUE: i32 = 1;
 
-    pub fn is_clamped() -> bool {
-        return true
-    }
-
-    pub fn new(value: i32) -> Self {
-        let range = Algorithm::range();
-        if range.contains(&value) {
-            Algorithm(value)
+    fn new(value: i32) -> Self {
+        let range = Self::get_range();
+        if Self::get_range().contains(&value) {
+            Self(value)
         }
         else {
-            if Self::is_clamped() {
-                Algorithm(num::clamp(value, *range.start(), *range.end()))
-            }
-            else {
-                panic!("expected value in range {}...{}, got {}", *range.start(), *range.end(), value);
-            }
+            panic!("expected value in range {}...{}, got {}",
+                *range.start(), *range.end(), value);
         }
     }
 
-    pub fn value(&self) -> i32 {
+    fn get_value(&self) -> i32 {
+        assert!(Algorithm::get_range().contains(&self.0));
         self.0
     }
+}
 
+impl Algorithm {
     pub fn as_byte(&self) -> u8 {
         (self.0 - 1) as u8  // adjust to 0...31 for SysEx
+    }
+}
+
+impl Default for Algorithm {
+    fn default() -> Algorithm {
+        Algorithm::new(Self::DEFAULT_VALUE)
     }
 }
 
@@ -118,18 +141,17 @@ impl From<u8> for Algorithm {
 
 impl RandomValue for Algorithm {
     type B = Algorithm;
-    type T = u8;
 
     fn random_value() -> Self::B {
-        let mut rng = rand::thread_rng();
-        let range = Self::B::range();
-        Self::B::new(rng.gen_range(*range.start() ..= *range.end()))
+        Self::B::new(get_random_value(Self::B::get_range()))
     }
 }
 
 impl fmt::Display for Algorithm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "#{}:\n{}", self.value(), ALGORITHM_DIAGRAMS[(self.value() as usize) - 1])
+        write!(f, "#{}:\n{}",
+            self.get_value(),
+            ALGORITHM_DIAGRAMS[(self.get_value() as usize) - 1])
     }
 }
 
@@ -137,36 +159,31 @@ impl fmt::Display for Algorithm {
 #[derive(Debug, Clone, Copy)]
 pub struct Detune(i32);
 
-impl Detune {
-    pub fn range() -> RangeInclusive<i32> {
-        RangeInclusive::new(-7, 7)
-    }
+impl Subrange for Detune {
+    const MINIMUM_VALUE: i32 = -7;
+    const MAXIMUM_VALUE: i32 = 7;
+    const DEFAULT_VALUE: i32 = 0;
 
-    pub fn is_clamped() -> bool {
-        return true
-    }
-
-    pub fn new(value: i32) -> Self {
-        let range = Detune::range();
+    fn new(value: i32) -> Self {
+        let range = Self::get_range();
         if range.contains(&value) {
-            Detune(value)
+            Self(value)
         }
         else {
-            if Self::is_clamped() {
-                Detune(num::clamp(value, *range.start(), *range.end()))
-            }
-            else {
-                panic!("expected value in range {}...{}, got {}", *range.start(), *range.end(), value);
-            }
+            panic!("expected value in range {}...{}, got {}",
+                *range.start(), *range.end(), value);
         }
     }
 
-    pub fn value(&self) -> i32 {
+    fn get_value(&self) -> i32 {
+        assert!(UnsignedLevel::get_range().contains(&self.0));
         self.0
     }
+}
 
+impl Detune {
     pub fn as_byte(&self) -> u8 {
-        (self.0 + 7) as u8
+        (self.0 + 7) as u8  // adjust for SysEx
     }
 }
 
@@ -178,12 +195,15 @@ impl From<u8> for Detune {
 
 impl RandomValue for Detune {
     type B = Detune;
-    type T = i32;
 
     fn random_value() -> Self::B {
-        let mut rng = rand::thread_rng();
-        let range = Self::B::range();
-        Self::B::new(rng.gen_range(*range.start() ..= *range.end()))
+        Self::B::new(get_random_value(Self::B::get_range()))
+    }
+}
+
+impl Default for Detune {
+    fn default() -> Detune {
+        Detune::new(Self::DEFAULT_VALUE)
     }
 }
 
@@ -191,34 +211,29 @@ impl RandomValue for Detune {
 #[derive(Debug, Clone, Copy)]
 pub struct Coarse(i32);
 
-impl Coarse {
-    pub fn range() -> RangeInclusive<i32> {
-        RangeInclusive::new(0, 31)
-    }
+impl Subrange for Coarse {
+    const MINIMUM_VALUE: i32 = 0;
+    const MAXIMUM_VALUE: i32 = 31;
+    const DEFAULT_VALUE: i32 = 0;
 
-    pub fn is_clamped() -> bool {
-        return true
-    }
-
-    pub fn new(value: i32) -> Self {
-        let range = Coarse::range();
-        if range.contains(&value) {
-            Coarse(value)
+    fn new(value: i32) -> Self {
+        let range = Self::get_range();
+        if Self::get_range().contains(&value) {
+            Self(value)
         }
         else {
-            if Self::is_clamped() {
-                Coarse(num::clamp(value, *range.start(), *range.end()))
-            }
-            else {
-                panic!("expected value in range {}...{}, got {}", *range.start(), *range.end(), value);
-            }
+            panic!("expected value in range {}...{}, got {}",
+                *range.start(), *range.end(), value);
         }
     }
 
-    pub fn value(&self) -> i32 {
+    fn get_value(&self) -> i32 {
+        assert!(Self::get_range().contains(&self.0));
         self.0
     }
+}
 
+impl Coarse {
     pub fn as_byte(&self) -> u8 {
         self.0 as u8
     }
@@ -230,38 +245,39 @@ impl From<u8> for Coarse {
     }
 }
 
+impl Default for Coarse {
+    fn default() -> Coarse {
+        Coarse::new(Self::DEFAULT_VALUE)
+    }
+}
+
 /// Depth (0...7) for sensitivity values.
 #[derive(Debug, Clone, Copy)]
 pub struct Depth(i32);
 
-impl Depth {
-    pub fn range() -> RangeInclusive<i32> {
-        RangeInclusive::new(0, 7)
-    }
+impl Subrange for Depth {
+    const MINIMUM_VALUE: i32 = 0;
+    const MAXIMUM_VALUE: i32 = 7;
+    const DEFAULT_VALUE: i32 = 0;
 
-    pub fn is_clamped() -> bool {
-        return true
-    }
-
-    pub fn new(value: i32) -> Self {
-        let range = Depth::range();
-        if range.contains(&value) {
-            Depth(value)
+    fn new(value: i32) -> Self {
+        let range = Self::get_range();
+        if Self::get_range().contains(&value) {
+            Self(value)
         }
         else {
-            if Self::is_clamped() {
-                Depth(num::clamp(value, *range.start(), *range.end()))
-            }
-            else {
-                panic!("expected value in range {}...{}, got {}", *range.start(), *range.end(), value);
-            }
+            panic!("expected value in range {}...{}, got {}",
+                *range.start(), *range.end(), value);
         }
     }
 
-    pub fn value(&self) -> i32 {
+    fn get_value(&self) -> i32 {
+        assert!(Self::get_range().contains(&self.0));
         self.0
     }
+}
 
+impl Depth {
     pub fn as_byte(&self) -> u8 {
         self.0 as u8
     }
@@ -275,12 +291,15 @@ impl From<u8> for Depth {
 
 impl RandomValue for Depth {
     type B = Depth;
-    type T = u8;
 
     fn random_value() -> Self::B {
-        let mut rng = rand::thread_rng();
-        let range = Self::B::range();
-        Self::B::new(rng.gen_range(*range.start() ..= *range.end()))
+        Self::B::new(get_random_value(Self::B::get_range()))
+    }
+}
+
+impl Default for Depth {
+    fn default() -> Depth {
+        Depth::new(Self::DEFAULT_VALUE)
     }
 }
 
@@ -800,8 +819,8 @@ impl Envelope {
 impl fmt::Display for Envelope {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "R1={} L1={} R2={} L2={} R3={} L3={} R4={} L4={}",
-            self.rates.0.value(), self.levels.0.value(), self.rates.1.value(), self.levels.1.value(),
-            self.rates.2.value(), self.levels.2.value(), self.rates.3.value(), self.levels.3.value())
+            self.rates.0.get_value(), self.levels.0.get_value(), self.rates.1.get_value(), self.levels.1.get_value(),
+            self.rates.2.get_value(), self.levels.2.get_value(), self.rates.3.get_value(), self.levels.3.get_value())
     }
 }
 
@@ -1112,7 +1131,7 @@ impl SystemExclusiveData for Operator {
         debug!("  b13: {:#08b}", byte12);
         data.push(byte13);
 
-        let output_level = self.output_level.value();
+        let output_level = self.output_level.get_value();
         debug!("  OL:  {:#08b}", output_level);
         data.push(self.output_level.as_byte());
 
@@ -1120,7 +1139,7 @@ impl SystemExclusiveData for Operator {
         debug!("  b15: {:#08b}", byte15);
         data.push(byte15);
 
-        let fine = self.fine.value();
+        let fine = self.fine.get_value();
         debug!("  FF:  {:#08b}", fine);
         data.push(self.fine.as_byte());
 
@@ -1136,9 +1155,9 @@ Amp mod sens = {}, Key vel sens = {}
 Level = {}, Mode = {:?}
 Coarse = {}, Fine = {}, Detune = {}
 ",
-            self.eg, self.kbd_level_scaling, self.kbd_rate_scaling.value(),
-            self.amp_mod_sens, self.key_vel_sens.value(), self.output_level.value(), self.mode,
-            self.coarse.value(), self.fine.value(), self.detune.value())
+            self.eg, self.kbd_level_scaling, self.kbd_rate_scaling.get_value(),
+            self.amp_mod_sens, self.key_vel_sens.get_value(), self.output_level.get_value(), self.mode,
+            self.coarse.get_value(), self.fine.get_value(), self.detune.get_value())
     }
 }
 
@@ -1271,8 +1290,8 @@ impl SystemExclusiveData for Lfo {
 impl fmt::Display for Lfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "speed = {}, delay = {}, PMD = {}, AMD = {}, sync = {}, wave = {:?}, pitch mod sens = {}",
-            self.speed.value(), self.delay.value(), self.pmd.value(), self.amd.value(),
-            self.sync, self.wave, self.pitch_mod_sens.value())
+            self.speed.get_value(), self.delay.get_value(), self.pmd.get_value(), self.amd.get_value(),
+            self.sync, self.wave, self.pitch_mod_sens.get_value())
     }
 }
 
@@ -1480,7 +1499,7 @@ impl SystemExclusiveData for Voice {
         debug!("PEG: {} bytes, {:?}", peg_data.len(), peg_data);
         data.extend(peg_data);
 
-        let algorithm = self.alg.value();
+        let algorithm = self.alg.get_value();
         //data.push((algorithm - 1).try_into().unwrap());  // bring alg to range 0...31
         data.push(self.alg.as_byte());
         debug!("ALG: {}", algorithm);
@@ -1522,7 +1541,7 @@ LFO: {}
 Transpose: {}
 ",
             self.name, self.operators[0], self.operators[1], self.operators[2], self.operators[3], self.operators[4], self.operators[5], self.peg,
-            self.alg, self.feedback.value(), self.osc_sync, self.lfo, self.transpose.value())
+            self.alg, self.feedback.get_value(), self.osc_sync, self.lfo, self.transpose.value())
     }
 }
 
@@ -1717,7 +1736,7 @@ mod tests {
         assert_eq!(data.len(), 21);
         let operator = Operator::from_bytes(data);
         let coarse = operator.coarse;
-        assert_eq!(coarse.value(), 0);
+        assert_eq!(coarse.get_value(), 0);
     }
 
     #[test]
@@ -1770,12 +1789,6 @@ mod tests {
     fn test_unsigned_level() {
         let level = UnsignedLevel::from(42);
         assert_eq!(level, UnsignedLevel::from(42));
-    }
-
-    #[test]
-    fn test_unsigned_level_clamped() {
-        let level = UnsignedLevel::from(192);  // too big for range
-        assert_eq!(level, UnsignedLevel::from(99));  // should be clamped to top of range
     }
 
     #[test]
