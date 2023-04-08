@@ -9,7 +9,6 @@ pub type ByteVector = Vec<u8>;
 /// Generates random value that falls in the range of the type.
 pub trait RandomValue {
     type B;  // semantic type
-    type T;  // primitive value type
     fn random_value() -> Self::B;
 }
 
