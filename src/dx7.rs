@@ -581,10 +581,10 @@ fn generate_voice(voice: Voice) -> ByteVector {
     payload.extend(voice_data);
     payload.push(checksum);
 
-    Message::new_manufacturer(
-        Manufacturer::Standard(0x43),
-        payload)
-    .to_bytes()
+    Message::ManufacturerSpecific {
+        manufacturer: Manufacturer::Standard(0x43),
+        payload
+    }.to_bytes()
 }
 
 pub fn generate_random_voice(output_filename: String) -> std::io::Result<()> {
@@ -636,9 +636,10 @@ pub fn generate_cartridge(output_filename: String) -> std::io::Result<()> {
     payload.extend(cartridge_data);
     payload.push(cartridge_checksum);
 
-    let message = Message::new_manufacturer(
-        Manufacturer::Standard(0x43),
-        payload);
+    let message = Message::ManufacturerSpecific {
+        manufacturer: Manufacturer::Standard(0x43),
+        payload
+    };
 
     if output_filename == "" {
         let now = SystemTime::now();

@@ -2,12 +2,12 @@
 name = "sevenator"
 version = "0.10.0"
 authors = ["Jere Käpyaho <2261936+jerekapyaho@users.noreply.github.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-env_logger = "0.9.0"
+env_logger = "0.10.0"
 log = "0.4.17"
 num = "0.4.0"
 rand = "0.8.5"
 bit = "0.1.1"
-syxpack = "0.7.2"
+syxpack = "0.9.0"
