@@ -1,25 +1,13 @@
 use std::env;
 use std::io::Error;
+use std::path::Path;
+
+use syxpack::read_file;
 
 mod dx7;
 
 pub type Byte = u8;
 pub type ByteVector = Vec<u8>;
-
-/// Generates random value that falls in the range of the type.
-pub trait RandomValue {
-    type B;  // semantic type
-    fn random_value() -> Self::B;
-}
-
-/// Parsing and generating MIDI System Exclusive data.
-pub trait SystemExclusiveData {
-    fn from_bytes(data: ByteVector) -> Self;
-    fn from_packed_bytes(data: ByteVector) -> Self;
-    fn to_bytes(&self) -> ByteVector;
-    fn to_packed_bytes(&self) -> ByteVector { vec![] }
-    fn data_size(&self) -> usize { 0 }
-}
 
 #[derive(Debug)]
 struct Config {
@@ -58,18 +46,38 @@ fn parse_config(args: &[String]) -> Config {
     }
 }
 
-fn main() -> Result<(), Error> {
+fn main() {
     env_logger::init();
 
     let args: Vec<String> = env::args().collect();
     let config = parse_config(&args[1..]);
     println!("args.len() = {}, config = {:?}", args.len(), config);
 
-    //println!("command = {}", config.command);
-    //println!("filename = {}", config.filename);
+    println!("command = {}", config.command);
+    println!("filename = {:?}", config.filename);
 
     match config.command.as_str() {
-        "dump" => dx7::dump(config.filename.unwrap(), match config.voice_number { None => 0, Some(n) => n }),
+        "list" => {
+            match read_file(Path::new(&config.filename.expect("no filename"))) {
+                Some(filedata) => {
+                    dx7::list_cartridge(&filedata);
+                },
+                None => {
+                    eprintln!("Error reading file");
+                }
+            }
+        },
+        "dump" => {
+            match read_file(Path::new(&config.filename.expect("no filename"))) {
+                Some(filedata) => {
+                    dx7::dump_cartridge(&filedata);
+                },
+                None => {
+                    eprintln!("Error reading file");
+                }
+            }
+        },
+        /*
         "generate" => match config.target.as_str() {
             "randomvoice" => {
                 dx7::generate_random_voice(config.filename.unwrap())
@@ -88,9 +96,9 @@ fn main() -> Result<(), Error> {
                 Ok(())
             }
         },
+         */
         _ => {
             eprintln!("Unknown command: {}", config.command);
-            Ok(())
         }
     }
 }

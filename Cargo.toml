@@ -1,13 +1,14 @@
 [package]
 name = "sevenator"
-version = "0.12.0"
+version = "0.14.0"
 authors = ["Jere Käpyaho <2261936+jerekapyaho@users.noreply.github.com>"]
 edition = "2021"
 
 [dependencies]
 env_logger = "0.10.0"
 log = "0.4.17"
-num = "0.4.0"
+num = "0.4.1"
 rand = "0.8.5"
 bit = "0.1.1"
-syxpack = "0.9.0"
+syxpack = "0.16.0"
+sevenate = { path = "../sevenate-rs" }
