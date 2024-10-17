@@ -1,10 +1,27 @@
+use std::fs;
 use std::env;
-use std::io::Error;
-use std::path::Path;
+use std::path::PathBuf;
+use std::io::Read;
+use std::time::{
+    SystemTime,
+    UNIX_EPOCH
+};
 
-use syxpack::read_file;
+use sevenate::Ranged;
+use sevenate::dx7::MIDIChannel;
+use sevenate::dx7::sysex::{
+    SystemExclusiveData,
+    Header,
+    Format,
+    checksum,
+};
 
-mod dx7;
+use syxpack::{
+    Message,
+    Manufacturer
+};
+
+pub mod dx7;
 
 pub type Byte = u8;
 pub type ByteVector = Vec<u8>;
@@ -56,9 +73,22 @@ fn main() {
     println!("command = {}", config.command);
     println!("filename = {:?}", config.filename);
 
+    let now = SystemTime::now();
+    let epoch_now = now
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+
+    let mut output_path = PathBuf::new();
+    output_path.push(format!("{}-{:?}.syx", config.target, epoch_now.as_secs()));
+
+    let mut input_path = PathBuf::new();
+    input_path.push(config.filename.expect("have a filename"));
+
+    let yamaha = Manufacturer::Standard(0x42);
+
     match config.command.as_str() {
         "list" => {
-            match read_file(Path::new(&config.filename.expect("no filename"))) {
+            match read_file(&input_path) {
                 Some(filedata) => {
                     dx7::list_cartridge(&filedata);
                 },
@@ -68,7 +98,7 @@ fn main() {
             }
         },
         "dump" => {
-            match read_file(Path::new(&config.filename.expect("no filename"))) {
+            match read_file(&input_path) {
                 Some(filedata) => {
                     dx7::dump_cartridge(&filedata);
                 },
@@ -77,28 +107,86 @@ fn main() {
                 }
             }
         },
-        /*
         "generate" => match config.target.as_str() {
             "randomvoice" => {
-                dx7::generate_random_voice(config.filename.unwrap())
+                let voice = dx7::make_random_voice();
+                let header = Header {
+                    sub_status: 0x00, // voice/cartridge
+                    channel: MIDIChannel::new(1),
+                    format: Format::Voice,
+                    byte_count: 155,
+                };
+                let mut payload = voice.to_bytes();
+                let sum = checksum(&payload);
+                payload.extend(header.to_bytes());
+                payload.push(sum);
+                let message = Message::ManufacturerSpecific {
+                    manufacturer: yamaha,
+                    payload,
+                };
+
+                if let Err(err) = write_file(&output_path, &message.to_bytes()) {
+                    eprintln!("Error writing file: {:?}", err);
+                }
             },
-            "cartridge" => {
-                dx7::generate_cartridge(config.filename.unwrap())
+            "randomcartridge" => {
+                let cartridge = dx7::make_random_cartridge();
+                let mut payload = cartridge.to_bytes();
+                let sum = checksum(&payload);
+                println!("cartridge payload length = {} bytes", payload.len());
+                let header = Header {
+                    sub_status: 0x00, // voice/cartridge
+                    channel: MIDIChannel::new(1),
+                    format: Format::Cartridge,
+                    byte_count: 4096,
+                };
+                payload.extend(header.to_bytes());
+                payload.push(sum);
+                let message = Message::ManufacturerSpecific {
+                    manufacturer: yamaha,
+                    payload,
+                };
+
+                if let Err(err) = write_file(&output_path, &message.to_bytes()) {
+                    eprintln!("Error writing file: {:?}", err);
+                }
             },
+            /*
             "initvoice" => {
                 dx7::generate_init_voice(config.filename.unwrap())
             },
             "example" => {
                 dx7::generate_example_voice(config.filename.unwrap())
             },
+             */
             _ => {
                 eprintln!("Unknown target: {}", config.target);
-                Ok(())
             }
         },
-         */
         _ => {
             eprintln!("Unknown command: {}", config.command);
         }
     }
+}
+
+fn read_file(name: &PathBuf) -> Option<Vec<u8>> {
+    match fs::File::open(&name) {
+        Ok(mut f) => {
+            let mut buffer = Vec::new();
+            match f.read_to_end(&mut buffer) {
+                Ok(_) => Some(buffer),
+                Err(_) => None
+            }
+        },
+        Err(_) => {
+            eprintln!("Unable to open file {}", &name.display());
+            None
+        }
+    }
+}
+
+fn write_file(path: &PathBuf, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    //let mut f = fs::File::create(&name).expect("create file");
+    fs::write(path, data)?;
+    Ok(())
 }
