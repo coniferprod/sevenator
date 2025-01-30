@@ -22,9 +22,7 @@ use syxpack::{
 };
 
 pub mod dx7;
-
-pub type Byte = u8;
-pub type ByteVector = Vec<u8>;
+pub mod tx802;
 
 #[derive(Debug)]
 struct Config {
