@@ -1,10 +1,21 @@
 use std::fs;
 use std::env;
-use std::path::PathBuf;
-use std::io::Read;
+use std::path::{
+    Path,
+    PathBuf
+};
+use std::io::{
+    Read,
+    Error
+};
 use std::time::{
     SystemTime,
     UNIX_EPOCH
+};
+
+use clap::{
+    Parser,
+    Subcommand
 };
 
 use sevenate::Ranged;
@@ -21,8 +32,43 @@ use syxpack::{
     Manufacturer
 };
 
+pub mod cmd;
 pub mod dx7;
 pub mod tx802;
+
+use crate::cmd::{
+    run_list,
+    run_extract,
+    run_dump
+};
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    List {
+        #[arg(short, long)]
+        file: PathBuf,
+    },
+
+    Extract {
+        #[arg(short, long)]
+        file: PathBuf,
+    },
+
+    Dump {
+        #[arg(short, long)]
+        file: PathBuf,
+
+        #[arg(short, long)]
+        number: Option<u8>,
+    }
+}
 
 #[derive(Debug)]
 struct Config {
@@ -64,6 +110,24 @@ fn parse_config(args: &[String]) -> Config {
 fn main() {
     env_logger::init();
 
+    let cli = Cli::parse();
+
+    match &cli.command {
+        Commands::List { file } => {
+            let path = PathBuf::from(file);
+            run_list(&path);
+        },
+        Commands::Extract { file } => {
+            let path = PathBuf::from(file);
+            run_extract(&path);
+        },
+        Commands::Dump { file, number } => {
+            let path = PathBuf::from(file);
+            run_dump(&path, number);
+        }
+    }
+
+    /*
     let args: Vec<String> = env::args().collect();
     let config = parse_config(&args[1..]);
     println!("args.len() = {}, config = {:?}", args.len(), config);
@@ -80,7 +144,7 @@ fn main() {
     output_path.push(format!("{}-{:?}.syx", config.target, epoch_now.as_secs()));
 
     let mut input_path = PathBuf::new();
-    input_path.push(config.filename.expect("have a filename"));
+    input_path.push(config.filename.expect("should have a filename"));
 
     let yamaha = Manufacturer::Standard(0x42);
 
@@ -161,10 +225,21 @@ fn main() {
                 eprintln!("Unknown target: {}", config.target);
             }
         },
+        "extract" => {
+            match read_file(&input_path) {
+                Some(filedata) => {
+                    dx7::extract_voices(&filedata, &input_path);
+                },
+                None => {
+                    eprintln!("Error reading file");
+                }
+            }
+        }
         _ => {
             eprintln!("Unknown command: {}", config.command);
         }
     }
+     */
 }
 
 fn read_file(name: &PathBuf) -> Option<Vec<u8>> {

@@ -1,16 +1,16 @@
+use std::path::PathBuf;
+use std::fs::File;
+use std::io::Write;
 use rand::Rng;
 
 use sevenate::dx7::lfo::Lfo;
-use syxpack::Message;
+use syxpack::{
+    Message,
+    Manufacturer
+};
 use sevenate::Ranged;
 use sevenate::dx7::{
-    Depth,
-    Algorithm,
-    Transpose,
-    Level,
-    Detune,
-    Coarse,
-    Sensitivity
+    Algorithm, Coarse, Depth, Detune, Level, Sensitivity, Transpose
 };
 use sevenate::dx7::cartridge::{
     Cartridge,
@@ -19,14 +19,11 @@ use sevenate::dx7::cartridge::{
 use sevenate::dx7::voice::{
     Voice,
     VoiceName,
-    OPERATOR_COUNT
+    OPERATOR_COUNT,
 };
 use sevenate::dx7::operator::{
     KeyboardLevelScaling,
     Operator,
-    Key,
-    Scaling,
-    ScalingCurve,
     OperatorMode
 };
 use sevenate::dx7::envelope::{
@@ -36,7 +33,9 @@ use sevenate::dx7::envelope::{
 use sevenate::dx7::lfo::LfoWaveform;
 use sevenate::dx7::sysex::{
     SystemExclusiveData,
-    Header
+    Header,
+    Format,
+    checksum
 };
 
 pub mod randomizer;
@@ -94,6 +93,7 @@ pub fn dump_cartridge(filedata: &[u8]) {
     match Message::from_bytes(&filedata) {
         Ok(Message::ManufacturerSpecific { manufacturer: _, payload }) => {
             println!("message payload length = {}", payload.len());
+
             let cartridge_data = &payload[Header::DATA_SIZE..];
             println!("cartridge data length = {}", cartridge_data.len());
             let cartridge = Cartridge::parse(&cartridge_data).unwrap();
@@ -104,6 +104,80 @@ pub fn dump_cartridge(filedata: &[u8]) {
         },
         _ => {
             eprintln!("invalid SysEx message");
+        }
+    }
+}
+
+pub fn extract_voices(filedata: &[u8], path: &PathBuf) {
+    match Message::from_bytes(&filedata) {
+        Ok(Message::ManufacturerSpecific { manufacturer: _, payload }) => {
+            println!("message payload length = {}", payload.len());
+
+            match Header::parse(&payload) {
+                Ok(mut header) => {
+                    println!("{}", header);
+
+                    let data = &payload[4..payload.len() - 1];
+                    println!("data length = {}", data.len());
+
+                    match header.format {
+                        Format::Voice => {
+                            eprintln!("Not extracting an individual voice");
+                        },
+                        Format::Cartridge => {
+                            // For a cartridge, pick out the data for each
+                            // of the 32 voices. Then unpack the voice data
+                            // and write it out to a new file.
+                            let mut voice_number = 1;
+                            let stem = path.file_stem().unwrap().to_str().unwrap();
+                            for packed_voice_data in data.chunks(128) {
+                                let voice_data = Voice::unpack(packed_voice_data);
+                                let mut payload = Vec::<u8>::new();
+
+                                // Change the format and byte count in the header,
+                                // then add it to the file data. Use the original channel.
+                                header.format = Format::Voice;
+                                header.byte_count = 155;
+                                payload.extend(header.to_bytes());
+                                payload.extend(&voice_data);
+
+                                payload.push(checksum(&voice_data.clone()));
+
+                                let message = Message::ManufacturerSpecific {
+                                    manufacturer: Manufacturer::Standard(0x43),
+                                    payload
+                                };
+
+                                let filename = format!("{}-{:02}.syx", stem, voice_number);
+                                match File::create(filename) {
+                                    Ok(mut file) => {
+                                        match file.write_all(&message.to_bytes()) {
+                                            Ok(_) => {},
+                                            Err(e) => {
+                                                eprintln!("Error writing file: {}", e);
+                                            }
+                                        }
+                                    },
+                                    Err(e) => {
+                                        eprintln!("Error creating file: {}", e);
+                                    }
+                                }
+
+                                voice_number += 1;
+                            }
+                        }
+                    }
+                },
+                Err(e) => {
+                    eprintln!("{}", e);
+                }
+            }
+        },
+        Err(e) => {
+            eprintln!("Error in message: {:?}", e);
+        },
+        _ => {
+            eprintln!("Not a manufacturer-specific System Exclusive message");
         }
     }
 }

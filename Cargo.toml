@@ -12,3 +12,4 @@ rand = "0.8.5"
 bit = "0.1.1"
 syxpack = "0.17.0"
 sevenate = { path = "../sevenate-rs" }
+clap = { version = "4.5.27", features = ["derive"] }
