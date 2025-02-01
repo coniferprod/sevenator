@@ -8,12 +8,12 @@ use std::time::{
 };
 
 use sevenate::Ranged;
-use sevenate::dx7::MIDIChannel;
 use sevenate::dx7::sysex::{
     SystemExclusiveData,
     Header,
     Format,
-    checksum,
+    MIDIChannel,
+    checksum
 };
 
 use syxpack::{
