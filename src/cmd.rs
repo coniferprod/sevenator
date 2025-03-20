@@ -231,3 +231,33 @@ pub fn run_dump(path: &PathBuf, number: &Option<u8>) {
         }
     }
 }
+
+use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
+
+pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
+    let mut xml = XMLBuilder::new()
+    .version(XMLVersion::XML1_1)
+    .encoding("UTF-8".into())
+    .build();
+
+    let mut cartridge_element = XMLElement::new("cartridge");
+    //cartridge.add_attribute("rooms", "2");
+
+    let cartridge: Cartridge = Default::default();
+
+    for voice in cartridge.voices {
+        let mut voice_element = XMLElement::new("voice");
+        //voice_element.add_attribute("number", &i.to_string());
+        //voice_element.add_text(format!("This is room number {}", i)).unwrap();
+        cartridge_element.add_child(voice_element).unwrap();
+    }
+
+    xml.set_root_element(cartridge_element);
+
+    let mut writer: Vec<u8> = Vec::new();
+    xml.generate(&mut writer).unwrap();
+
+    let output = File::create(output_path);
+    output.expect("to create output file").write_all(&writer).expect("to write XML data into the output file");
+
+}

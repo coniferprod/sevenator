@@ -13,3 +13,4 @@ bit = "0.1.1"
 syxpack = "0.17.0"
 sevenate = { path = "../sevenate-rs" }
 clap = { version = "4.5.27", features = ["derive"] }
+xml-builder = "0.5.4"

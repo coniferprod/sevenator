@@ -396,6 +396,7 @@ dependencies = [
  "rand",
  "sevenate",
  "syxpack",
+ "xml-builder",
 ]
 
 [[package]]
@@ -517,3 +518,9 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "xml-builder"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c023e38161c176b6ed516e2c398acd755cd19983661eff519b811c01646e10f"
