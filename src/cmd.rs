@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::str;
 
+use sevenate::Ranged;
 use syxpack::{
     Message,
     Manufacturer
@@ -233,6 +234,116 @@ pub fn run_dump(path: &PathBuf, number: &Option<u8>) {
 }
 
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
+use sevenate::dx7::lfo::Lfo;
+use sevenate::dx7::envelope::Envelope;
+use sevenate::dx7::operator::Operator;
+
+trait ToXml {
+    fn to_xml(&self) -> XMLElement;
+    fn to_xml_named(&self, name: &str) -> XMLElement;
+}
+
+impl ToXml for Voice {
+    fn to_xml(&self) -> XMLElement {
+        self.to_xml_named("voice")
+    }
+
+    fn to_xml_named(&self, name: &str) -> XMLElement {
+        let mut e = XMLElement::new(name);
+
+        e.add_attribute("name", &self.name.value());
+        e.add_attribute("algorithm", &self.alg.value().to_string());
+        e.add_attribute("transpose", &self.transpose.value().to_string());
+        e.add_attribute("feedback", &self.feedback.value().to_string());
+        e.add_attribute("oscsync", &self.osc_sync.to_string());
+
+        e.add_child(self.peg.to_xml_named("peg")).unwrap();
+        e.add_child(self.lfo.to_xml()).unwrap();
+
+        let mut op_e = XMLElement::new("operators");
+        for op in self.operators {
+            op_e.add_child(op.to_xml()).unwrap();
+        }
+        e.add_child(op_e);
+
+        e
+    }
+}
+
+impl ToXml for Lfo {
+    fn to_xml(&self) -> XMLElement {
+        self.to_xml_named("lfo")
+    }
+
+    fn to_xml_named(&self, name: &str) -> XMLElement {
+        let mut e = XMLElement::new(name);
+    
+        e.add_attribute("speed", &self.speed.value().to_string());
+        e.add_attribute("delay", &self.delay.value().to_string());
+        e.add_attribute("pmd", &self.pmd.value().to_string());
+        e.add_attribute("amd", &self.amd.value().to_string());
+        e.add_attribute("sync", &self.sync.to_string());
+        e.add_attribute("wave", &self.waveform.to_string());
+        //e.add_attribute("pms", &lfo.pms.value().to_string());
+    
+        e
+    }    
+}
+
+impl ToXml for Envelope {
+    fn to_xml(&self) -> XMLElement {
+        unimplemented!();
+    }
+
+    fn to_xml_named(&self, name: &str) -> XMLElement {
+        let mut e = XMLElement::new(name);
+
+        let mut rates_element = XMLElement::new("rates");
+        let mut rates_string = String::new();
+        let mut count = 0;
+        for r in self.rates.iter() {
+            rates_string.push_str(&r.to_string());
+            count += 1;
+            if count < 4 {
+                rates_string.push_str(" ");
+            }
+        }
+
+        rates_element.add_text(rates_string).unwrap();
+        e.add_child(rates_element);
+
+        let mut levels_element = XMLElement::new("levels");
+        let mut levels_string = String::new();
+        let mut count = 0;
+        for level in self.levels.iter() {
+            levels_string.push_str(&level.to_string());
+            count += 1;
+            if count < 4 {
+                levels_string.push_str(" ");
+            }
+        }
+        levels_element.add_text(levels_string).unwrap();
+        e.add_child(levels_element);
+
+        e
+    }
+}
+
+impl ToXml for Operator {
+    fn to_xml(&self) -> XMLElement {
+        self.to_xml_named("operator")
+    }
+
+    fn to_xml_named(&self, name: &str) -> XMLElement {
+        let mut e = XMLElement::new(name);
+
+        e.add_attribute("level", &self.output_level.value().to_string());
+
+        e.add_child(self.eg.to_xml_named("eg")).unwrap();
+
+        e
+    }
+}
 
 pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
     let mut xml = XMLBuilder::new()
@@ -241,15 +352,11 @@ pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
     .build();
 
     let mut cartridge_element = XMLElement::new("cartridge");
-    //cartridge.add_attribute("rooms", "2");
 
     let cartridge: Cartridge = Default::default();
 
     for voice in cartridge.voices {
-        let mut voice_element = XMLElement::new("voice");
-        //voice_element.add_attribute("number", &i.to_string());
-        //voice_element.add_text(format!("This is room number {}", i)).unwrap();
-        cartridge_element.add_child(voice_element).unwrap();
+        cartridge_element.add_child(voice.to_xml()).unwrap();
     }
 
     xml.set_root_element(cartridge_element);
@@ -258,6 +365,8 @@ pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
     xml.generate(&mut writer).unwrap();
 
     let output = File::create(output_path);
-    output.expect("to create output file").write_all(&writer).expect("to write XML data into the output file");
-
+    output
+        .expect("to create output file")
+        .write_all(&writer)
+        .expect("to write XML data into the output file");
 }
