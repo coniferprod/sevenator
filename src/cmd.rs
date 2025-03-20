@@ -236,7 +236,7 @@ pub fn run_dump(path: &PathBuf, number: &Option<u8>) {
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 use sevenate::dx7::lfo::Lfo;
 use sevenate::dx7::envelope::Envelope;
-use sevenate::dx7::operator::Operator;
+use sevenate::dx7::operator::{KeyboardLevelScaling, Operator};
 
 trait ToXml {
     fn to_xml(&self) -> XMLElement;
@@ -338,8 +338,27 @@ impl ToXml for Operator {
         let mut e = XMLElement::new(name);
 
         e.add_attribute("level", &self.output_level.value().to_string());
+        e.add_attribute("mode", &self.mode.to_string());
+        e.add_attribute("coarse", &self.coarse.value().to_string());
+        e.add_attribute("fine", &self.fine.value().to_string());
+        e.add_attribute("detune", &self.detune.value().to_string());
+        e.add_attribute("ams", &self.amp_mod_sens.value().to_string());
+        e.add_attribute("touchsensitivity", &self.key_vel_sens.value().to_string());
+        e.add_attribute("keyboardratescaling", &self.kbd_rate_scaling.value().to_string());
 
         e.add_child(self.eg.to_xml_named("eg")).unwrap();
+
+        e
+    }
+}
+
+impl ToXml for KeyboardLevelScaling {
+    fn to_xml(&self) -> XMLElement {
+        self.to_xml_named("keyboardlevelscaling")
+    }
+
+    fn to_xml_named(&self, name: &str) -> XMLElement {
+        let mut e = XMLElement::new(name);
 
         e
     }
