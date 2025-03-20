@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+    <!-- Algorithm 1...32 -->
+    <xsd:simpleType name="algorithm-type">
+        <xsd:restriction base="xsd:positiveInteger">
+            <xsd:minInclusive value="1"/>
+            <xsd:maxInclusive value="32"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Level 0...99 -->
+    <xsd:simpleType name="level-type">
+        <xsd:restriction base="xsd:nonNegativeInteger">
+            <xsd:maxInclusive value="99"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Transpose -2...+2 octaves -->
+    <xsd:simpleType name="transpose-type">
+        <xsd:restriction base="xsd:integer">
+            <xsd:minInclusive value="-2"/>
+            <xsd:maxInclusive value="2"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- LFO waveform -->
+    <xsd:simpleType name="lfo-waveform-type">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="triangle"/>
+            <xsd:enumeration value="saw-down"/>
+            <xsd:enumeration value="saw-up"/>
+            <xsd:enumeration value="square"/>
+            <xsd:enumeration value="sine"/>
+            <xsd:enumeration value="sample-and-hold"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Depth 0...7 -->
+    <xsd:simpleType name="depth-type">
+        <xsd:restriction base="xsd:nonNegativeInteger">
+            <xsd:maxInclusive value="7"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Sensitivity 0...3 -->
+    <xsd:simpleType name="sensitivity-type">
+        <xsd:restriction base="xsd:nonNegativeInteger">
+            <xsd:maxInclusive value="3"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Coarse 0...31 -->
+    <xsd:simpleType name="coarse-type">
+        <xsd:restriction base="xsd:nonNegativeInteger">
+            <xsd:maxInclusive value="31"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Fine 0...99 -->
+    <xsd:simpleType name="fine-type">
+        <xsd:restriction base="xsd:nonNegativeInteger">
+            <xsd:maxInclusive value="99"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Detune -7...+7 -->
+    <xsd:simpleType name="detune-type">
+        <xsd:restriction base="xsd:integer">
+            <xsd:minInclusive value="-7"/>
+            <xsd:maxInclusive value="7"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Voice name, exactly 10 characters -->
+    <xsd:simpleType name="name-type">
+        <xsd:restriction base="xsd:string">
+            <xsd:length value="10"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Operator mode -->
+    <xsd:simpleType name="mode-type">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="ratio"/>
+            <xsd:enumeration value="fixed"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:complexType name="operator-type">
+        <xsd:all>
+            <xsd:element ref="eg"/>
+            <xsd:element ref="keyboardlevelscaling"/>
+        </xsd:all>
+        <xsd:attribute name="level" type="level-type" use="required"/>
+        <xsd:attribute name="mode" type="mode-type" use="required"/>
+        <xsd:attribute name="coarse" type="coarse-type" use="required"/>
+        <xsd:attribute name="fine" type="fine-type" use="required"/>
+        <xsd:attribute name="detune" type="detune-type" use="required"/>
+        <xsd:attribute name="ams" type="sensitivity-type" use="required"/>
+        <xsd:attribute name="touchsensitivity" type="depth-type" use="required"/>
+        <xsd:attribute name="keyboardratescaling" type="depth-type" use="required"/>
+    </xsd:complexType>
+
+    <xsd:element name="operator" type="operator-type"/>
+
+    <xsd:element name="operators">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element ref="operator" minOccurs="6" maxOccurs="6"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="voice">
+        <xsd:complexType>
+            <xsd:all>
+                <xsd:element ref="operators"/>
+                <xsd:element ref="peg"/>
+                <xsd:element ref="lfo"/>
+            </xsd:all>
+            <xsd:attribute name="name" type="name-type"/>
+            <xsd:attribute name="algorithm" type="algorithm-type"/>
+            <xsd:attribute name="transpose" type="transpose-type"/>
+            <xsd:attribute name="feedback" type="depth-type"/>
+            <xsd:attribute name="oscsync" type="xsd:boolean"/>
+        </xsd:complexType>
+    </xsd:element>
+
+    <!-- Define a list of rates or levels -->
+    <xsd:simpleType name="rate-or-level-list-type">
+        <xsd:list itemType="level-type"/>
+    </xsd:simpleType>
+
+    <!-- Define a type for rates or levels restricted to exactly four items -->
+    <xsd:simpleType name="eg-rates-or-levels-type">
+        <xsd:restriction base="rate-or-level-list-type">
+            <xsd:length value="4"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:complexType name="eg-type">
+        <xsd:all>
+            <xsd:element name="rates" type="eg-rates-or-levels-type"/>
+            <xsd:element name="levels" type="eg-rates-or-levels-type"/>
+        </xsd:all>
+    </xsd:complexType>
+
+    <xsd:element name="eg" type="eg-type"/>
+    <xsd:element name="peg" type="eg-type"/>
+
+    <!-- Curve style -->
+    <xsd:simpleType name="curve-style-type">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="-EXP"/>
+            <xsd:enumeration value="+EXP"/>
+            <xsd:enumeration value="+LIN"/>
+            <xsd:enumeration value="-LIN"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Breakpoint key is MIDI note 0...127 -->
+    <xsd:simpleType name="key-type">
+        <xsd:restriction base="xsd:nonNegativeInteger">
+            <xsd:maxInclusive value="127"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:element name="keyboardlevelscaling">
+        <xsd:complexType>
+            <xsd:all>
+                <xsd:element name="depth">
+                    <xsd:complexType>
+                        <xsd:attribute name="left" type="level-type"/>
+                        <xsd:attribute name="right" type="level-type"/>
+                    </xsd:complexType>
+                </xsd:element>
+                <xsd:element name="curve">
+                    <xsd:complexType>
+                        <xsd:attribute name="left" type="curve-style-type"/>
+                        <xsd:attribute name="right" type="curve-style-type"/>
+                    </xsd:complexType>
+                </xsd:element>
+            </xsd:all>
+            <xsd:attribute name="breakpoint" type="key-type"/>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="lfo">
+        <xsd:complexType>
+            <xsd:attribute name="speed" type="level-type" use="required"/>
+            <xsd:attribute name="delay" type="level-type" use="required"/>
+            <xsd:attribute name="pmd" type="level-type" use="required"/>
+            <xsd:attribute name="amd" type="level-type" use="required"/>
+            <xsd:attribute name="sync" type="xsd:boolean" use="required"/>
+            <xsd:attribute name="wave" type="lfo-waveform-type" use="required"/>
+            <xsd:attribute name="pms" type="depth-type" use="required"/>
+        </xsd:complexType>
+    </xsd:element>
+
+</xsd:schema>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<cartridge xmlns:xi="http://www.w3.org/2001/XInclude">
+    <voices>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+        <xi:include href="brass1.xml"/>
+    </voices>
+</cartridge>

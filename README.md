@@ -225,3 +225,13 @@ patch chart on page 28 of the DX7 Operating Manual.
 ## Yamaha TX802 notes
 
 The Yamaha TX802 voice edit buffer accepts single voices in DX7 format.
+
+## XML documents
+
+The voices and cartridges have an XML Schema definition (subject to change).
+To validate an XML document, use xmllint like so:
+
+    xmllint --xinclude --schema cartridge.xsd testcartridge.xml
+
+This will process the XInclude elements first, and then validate the result
+against the XML Schema.

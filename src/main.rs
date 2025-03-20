@@ -242,21 +242,6 @@ fn main() {
      */
 }
 
-fn read_file(name: &PathBuf) -> Option<Vec<u8>> {
-    match fs::File::open(&name) {
-        Ok(mut f) => {
-            let mut buffer = Vec::new();
-            match f.read_to_end(&mut buffer) {
-                Ok(_) => Some(buffer),
-                Err(_) => None
-            }
-        },
-        Err(_) => {
-            eprintln!("Unable to open file {}", &name.display());
-            None
-        }
-    }
-}
 
 fn write_file(path: &PathBuf, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
     //let mut f = fs::File::create(&name).expect("create file");

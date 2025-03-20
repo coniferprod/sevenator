@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+    <xsd:include schemaLocation="voice.xsd"/>
+
+    <xsd:element name="voices">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element ref="voice" minOccurs="32" maxOccurs="32"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="cartridge">
+        <xsd:complexType>
+            <xsd:all>
+                <xsd:element ref="voices"/>
+            </xsd:all>
+        </xsd:complexType>
+    </xsd:element>
+
+</xsd:schema>
