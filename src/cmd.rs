@@ -4,6 +4,8 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::str;
 
+use dbg_hex::dbg_hex;
+
 use sevenate::Ranged;
 use syxpack::{
     Message,
@@ -398,21 +400,57 @@ impl ToXml for KeyboardLevelScaling {
 }
 
 pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
-    let mut xml = XMLBuilder::new()
-        .version(XMLVersion::XML1_1)
-        .encoding("UTF-8".into())
-        .build();
+    let Some(buffer) = read_file(&input_path) else {
+        eprintln!("Unable to read from {}", input_path.display());
+        return;
+    };
 
-    let cartridge: Cartridge = Default::default();
-    let cartridge_element = cartridge.to_xml();
-    xml.set_root_element(cartridge_element);
+    let Ok(Message::ManufacturerSpecific { manufacturer: _, payload }) 
+            = Message::from_bytes(&buffer) else {
+        eprintln!("Error in message");
+        return;
+    };
 
-    let mut writer: Vec<u8> = Vec::new();
-    xml.generate(&mut writer).unwrap();
+    let Ok(header) = Header::parse(&payload) else {
+        eprintln!("Error parsing header");
+        return;
+    };
 
-    let output = File::create(output_path);
-    output
-        .expect("to create output file")
-        .write_all(&writer)
-        .expect("to write XML data into the output file");
+    println!("Header = {}", header);
+
+    let data = &payload[Header::DATA_SIZE .. payload.len() - 1];
+    //dbg_hex!(data);
+
+    match header.format {
+        Format::Voice => {
+            eprintln!("Don't know how to make voice XML, only cartridge");
+            return;
+        },
+        Format::Cartridge => {
+            println!("data length = {}", data.len());
+
+            let Ok(cartridge) = Cartridge::parse(&data) else {
+                eprintln!("Error parsing cartridge data");
+                return;
+            };
+
+            let mut xml = XMLBuilder::new()
+                .version(XMLVersion::XML1_1)
+                .encoding("UTF-8".into())
+                .build();
+            
+            let cartridge_element = cartridge.to_xml();
+            xml.set_root_element(cartridge_element);
+            
+            let mut writer: Vec<u8> = Vec::new();
+            xml.generate(&mut writer).unwrap();
+        
+            let output = File::create(output_path);
+            output
+                .expect("to create output file")
+                .write_all(&writer)
+                .expect("to write XML data into the output file");
+            
+        }
+    }    
 }

@@ -390,6 +390,7 @@ version = "0.15.1"
 dependencies = [
  "bit",
  "clap",
+ "dbg_hex",
  "env_logger",
  "log",
  "num",
