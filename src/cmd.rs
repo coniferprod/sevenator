@@ -243,6 +243,25 @@ trait ToXml {
     fn to_xml_named(&self, name: &str) -> XMLElement;
 }
 
+impl ToXml for Cartridge {
+    fn to_xml(&self) -> XMLElement {
+        self.to_xml_named("cartridge")
+    }
+
+    fn to_xml_named(&self, name: &str) -> XMLElement {
+        let mut e = XMLElement::new(name);
+
+        let mut voices_element = XMLElement::new("voices");
+
+        for voice in &self.voices {
+            voices_element.add_child(voice.to_xml()).unwrap();
+        }
+
+        e.add_child(voices_element);
+        e
+    }
+}
+
 impl ToXml for Voice {
     fn to_xml(&self) -> XMLElement {
         self.to_xml_named("voice")
@@ -255,7 +274,8 @@ impl ToXml for Voice {
         e.add_attribute("algorithm", &self.alg.value().to_string());
         e.add_attribute("transpose", &self.transpose.value().to_string());
         e.add_attribute("feedback", &self.feedback.value().to_string());
-        e.add_attribute("oscsync", &self.osc_sync.to_string());
+        e.add_attribute("oscillatorSync", &self.osc_sync.to_string());
+        e.add_attribute("pitchModulationSensitivity", &self.pitch_mod_sens.value().to_string());
 
         e.add_child(self.peg.to_xml_named("peg")).unwrap();
         e.add_child(self.lfo.to_xml()).unwrap();
@@ -342,11 +362,12 @@ impl ToXml for Operator {
         e.add_attribute("coarse", &self.coarse.value().to_string());
         e.add_attribute("fine", &self.fine.value().to_string());
         e.add_attribute("detune", &self.detune.value().to_string());
-        e.add_attribute("ams", &self.amp_mod_sens.value().to_string());
-        e.add_attribute("touchsensitivity", &self.key_vel_sens.value().to_string());
-        e.add_attribute("keyboardratescaling", &self.kbd_rate_scaling.value().to_string());
+        e.add_attribute("amplitudeModulationSensitivity", &self.amp_mod_sens.value().to_string());
+        e.add_attribute("keyVelocitySensitivity", &self.key_vel_sens.value().to_string());
+        e.add_attribute("keyboardRateScaling", &self.kbd_rate_scaling.value().to_string());
 
         e.add_child(self.eg.to_xml_named("eg")).unwrap();
+        e.add_child(self.kbd_level_scaling.to_xml()).unwrap();
 
         e
     }
@@ -354,30 +375,36 @@ impl ToXml for Operator {
 
 impl ToXml for KeyboardLevelScaling {
     fn to_xml(&self) -> XMLElement {
-        self.to_xml_named("keyboardlevelscaling")
+        self.to_xml_named("keyboardLevelScaling")
     }
 
     fn to_xml_named(&self, name: &str) -> XMLElement {
-        let mut e = XMLElement::new(name);
+        let mut elem = XMLElement::new(name);
 
-        e
+        elem.add_attribute("breakpoint", &self.breakpoint.value().to_string());
+
+        let mut depth_element = XMLElement::new("depth");
+        depth_element.add_attribute("left", &self.left.depth.value().to_string());
+        depth_element.add_attribute("right", &self.right.depth.value().to_string());
+        elem.add_child(depth_element);
+
+        let mut curve_element = XMLElement::new("curve");
+        curve_element.add_attribute("left", &self.left.curve.to_string());
+        curve_element.add_attribute("right", &self.right.curve.to_string());
+        elem.add_child(curve_element);
+
+        elem
     }
 }
 
 pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
     let mut xml = XMLBuilder::new()
-    .version(XMLVersion::XML1_1)
-    .encoding("UTF-8".into())
-    .build();
-
-    let mut cartridge_element = XMLElement::new("cartridge");
+        .version(XMLVersion::XML1_1)
+        .encoding("UTF-8".into())
+        .build();
 
     let cartridge: Cartridge = Default::default();
-
-    for voice in cartridge.voices {
-        cartridge_element.add_child(voice.to_xml()).unwrap();
-    }
-
+    let cartridge_element = cartridge.to_xml();
     xml.set_root_element(cartridge_element);
 
     let mut writer: Vec<u8> = Vec::new();
