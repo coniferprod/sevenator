@@ -87,47 +87,6 @@
         </xsd:restriction>
     </xsd:simpleType>
 
-    <xsd:complexType name="operatorType">
-        <xsd:all>
-            <xsd:element ref="eg"/>
-            <xsd:element ref="keyboardLevelScaling"/>
-        </xsd:all>
-        <xsd:attribute name="level" type="levelType" use="required"/>
-        <xsd:attribute name="mode" type="operatorModeType" use="required"/>
-        <xsd:attribute name="coarse" type="coarseType" use="required"/>
-        <xsd:attribute name="fine" type="fineType" use="required"/>
-        <xsd:attribute name="detune" type="detuneType" use="required"/>
-        <xsd:attribute name="amplitudeModulationSensitivity" type="sensitivityType" use="required"/>
-        <xsd:attribute name="keyVelocitySensitivity" type="depthType" use="required"/>
-        <xsd:attribute name="keyboardRateScaling" type="depthType" use="required"/>
-    </xsd:complexType>
-
-    <xsd:element name="operator" type="operatorType"/>
-
-    <xsd:element name="operators">
-        <xsd:complexType>
-            <xsd:sequence>
-                <xsd:element ref="operator" minOccurs="6" maxOccurs="6"/>
-            </xsd:sequence>
-        </xsd:complexType>
-    </xsd:element>
-
-    <xsd:element name="voice">
-        <xsd:complexType>
-            <xsd:all>
-                <xsd:element ref="operators"/>
-                <xsd:element ref="peg"/>
-                <xsd:element ref="lfo"/>
-            </xsd:all>
-            <xsd:attribute name="name" type="nameType"/>
-            <xsd:attribute name="algorithm" type="algorithmType"/>
-            <xsd:attribute name="transpose" type="transposeType"/>
-            <xsd:attribute name="feedback" type="depthType"/>
-            <xsd:attribute name="oscillatorSync" type="xsd:boolean"/>
-            <xsd:attribute name="pitchModulationSensitivity" type="depthType" use="required"/>
-        </xsd:complexType>
-    </xsd:element>
-
     <!-- Define a list of rates or levels -->
     <xsd:simpleType name="rateOrLevelListType">
         <xsd:list itemType="levelType"/>
@@ -172,18 +131,43 @@
             <xsd:all>
                 <xsd:element name="depth">
                     <xsd:complexType>
-                        <xsd:attribute name="left" type="levelType"/>
-                        <xsd:attribute name="right" type="levelType"/>
+                        <xsd:attribute name="left" type="levelType" use="required"/>
+                        <xsd:attribute name="right" type="levelType" use="required"/>
                     </xsd:complexType>
                 </xsd:element>
                 <xsd:element name="curve">
                     <xsd:complexType>
-                        <xsd:attribute name="left" type="curveStyleType"/>
-                        <xsd:attribute name="right" type="curveStyleType"/>
+                        <xsd:attribute name="left" type="curveStyleType" use="required"/>
+                        <xsd:attribute name="right" type="curveStyleType" use="required"/>
                     </xsd:complexType>
                 </xsd:element>
             </xsd:all>
-            <xsd:attribute name="breakpoint" type="keyType"/>
+            <xsd:attribute name="breakpoint" type="keyType" use="required"/>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:complexType name="operatorType">
+        <xsd:all>
+            <xsd:element ref="eg"/>
+            <xsd:element ref="keyboardLevelScaling"/>
+        </xsd:all>
+        <xsd:attribute name="level" type="levelType" use="required"/>
+        <xsd:attribute name="mode" type="operatorModeType" use="required"/>
+        <xsd:attribute name="coarse" type="coarseType" use="required"/>
+        <xsd:attribute name="fine" type="fineType" use="required"/>
+        <xsd:attribute name="detune" type="detuneType" use="required"/>
+        <xsd:attribute name="amplitudeModulationSensitivity" type="sensitivityType" use="required"/>
+        <xsd:attribute name="keyVelocitySensitivity" type="depthType" use="required"/>
+        <xsd:attribute name="keyboardRateScaling" type="depthType" use="required"/>
+    </xsd:complexType>
+
+    <xsd:element name="operator" type="operatorType"/>
+
+    <xsd:element name="operators">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element ref="operator" minOccurs="6" maxOccurs="6"/>
+            </xsd:sequence>
         </xsd:complexType>
     </xsd:element>
 
@@ -195,6 +179,22 @@
             <xsd:attribute name="amd" type="levelType" use="required"/>
             <xsd:attribute name="sync" type="xsd:boolean" use="required"/>
             <xsd:attribute name="wave" type="lfoWaveformType" use="required"/>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="voice">
+        <xsd:complexType>
+            <xsd:all>
+                <xsd:element ref="operators"/>
+                <xsd:element ref="peg"/>
+                <xsd:element ref="lfo"/>
+            </xsd:all>
+            <xsd:attribute name="name" type="nameType" use="required"/>
+            <xsd:attribute name="algorithm" type="algorithmType" use="required"/>
+            <xsd:attribute name="transpose" type="transposeType" use="required"/>
+            <xsd:attribute name="feedback" type="depthType" use="required"/>
+            <xsd:attribute name="oscillatorSync" type="xsd:boolean" use="required"/>
+            <xsd:attribute name="pitchModulationSensitivity" type="depthType" use="required"/>
         </xsd:complexType>
     </xsd:element>
 
