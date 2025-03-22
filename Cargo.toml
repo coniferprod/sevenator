@@ -15,3 +15,4 @@ sevenate = { git = "https://github.com/coniferprod/sevenate-rs.git" }
 clap = { version = "4.5.32", features = ["derive"] }
 xml-builder = "0.5.4"
 dbg_hex = "0.2.0"
+xml-rs = "0.8.25"

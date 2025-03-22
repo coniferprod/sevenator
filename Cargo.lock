@@ -503,6 +503,7 @@ dependencies = [
  "sevenate",
  "syxpack",
  "xml-builder",
+ "xml-rs",
 ]
 
 [[package]]
@@ -648,6 +649,12 @@ name = "xml-builder"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c023e38161c176b6ed516e2c398acd755cd19983661eff519b811c01646e10f"
+
+[[package]]
+name = "xml-rs"
+version = "0.8.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5b940ebc25896e71dd073bad2dbaa2abfe97b0a391415e22ad1326d9c54e3c4"
 
 [[package]]
 name = "zerocopy"

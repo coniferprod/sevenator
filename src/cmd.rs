@@ -454,3 +454,103 @@ pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
         }
     }    
 }
+
+use std::io::BufReader;
+use xml::reader::{EventReader, XmlEvent};
+use sevenate::dx7::voice::VoiceName;
+use sevenate::dx7::{Algorithm, Transpose, Depth};
+
+pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
+    let file = match File::open(input_path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Unable to read from {}, error = {}", 
+                input_path.display(), err);
+            return;    
+        }
+    };
+
+    let file = BufReader::new(file);
+    let parser = EventReader::new(file);
+
+    // Creating a default cartridge also creates 32 default voices. 
+    let mut cartridge: Cartridge = Default::default();
+    let mut voice_index: usize = 0;  // index of next voice to save in the cartridge
+    let mut voice: Voice = Default::default();
+    let mut operator_index: usize = 0;  // index of operator to save in voice
+    let mut operator: Operator = Operator::new();
+    for element in parser {
+        match element {
+            Ok(XmlEvent::StartElement { name, attributes, namespace }) => {
+                println!("start {}", name);
+
+                match name.local_name.as_str() {
+                    "cartridge" => {},
+                    "voice" => {
+                        for attr in attributes {
+                            match attr.name.local_name.as_str() {
+                                "name" => {
+                                    voice.name = VoiceName::from_string(attr.value);
+                                },
+                                "algorithm" => {
+                                    voice.alg = Algorithm::new(attr.value.parse().expect("valid algorithm"));
+                                },
+                                "transpose" => {
+                                    voice.transpose = Transpose::new(attr.value.parse().expect("valid transpose"));
+                                },
+                                "feedback" => {
+                                    voice.feedback = Depth::new(attr.value.parse().expect("valid feedback"));
+                                },
+                                "oscillatorSync" => {
+                                    voice.osc_sync = attr.value.parse().expect("valid boolean");
+                                },
+                                "pitchModulationSensitivity" => {
+                                    voice.pitch_mod_sens = Depth::new(attr.value.parse().expect("valid PMS"));
+                                }
+                                _ => {}
+                            }
+                        }
+                    },
+                    "operator" => {
+
+                    }
+                    _ => {}
+                };
+
+            }
+            Ok(XmlEvent::EndElement { name }) => {
+                println!("end {}", name);
+
+                match name.local_name.as_str() {
+                    "cartridge" => {},
+                    "voice" => {
+                        cartridge.voices[voice_index] = voice.clone();
+                        voice_index += 1;
+                        operator_index = 0;  // voice added, reset operator count
+
+                    },
+                    "operator" => {
+                        let mut ops = voice.operators;
+                        ops[operator_index] = operator;
+                        operator_index += 1;
+                    },
+                    _ => {}
+                }
+            }
+            Err(e) => {
+                eprintln!("Error: {e}");
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    // Print the results for debugging:
+    for voice in cartridge.voices {
+        println!("{} {}", voice.name.value(), voice.alg.value());
+        for op in voice.operators {
+            println!("{}", op);
+        }
+        println!();
+    }
+}
