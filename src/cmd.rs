@@ -179,59 +179,60 @@ pub fn run_extract(path: &PathBuf) {
 /// or a cartridge of 32 voices, based on the format byte at offset 3.
 /// Voice number is 1...32 for cartridges, ignored for single voices.
 pub fn run_dump(path: &PathBuf, number: &Option<u8>) {
-    if let Some(buffer) = read_file(&path) {
-        match Message::from_bytes(&buffer) {
-            Ok(Message::ManufacturerSpecific { manufacturer, payload }) => {
-                println!("Manufacturer = {}", manufacturer);
-                println!("Payload = {} bytes", payload.len());
+    let Some(buffer) = read_file(&path) else {
+        eprintln!("Unable to read from {}", path.display());
+        return;
+    };
 
-                match Header::parse(&payload) {
-                    Ok(header) => {
-                        println!("{}", header);
+    println!("File size = {} bytes", buffer.len());
 
-                        let data = &payload[4..payload.len() - 1];
-                        println!("data length = {}", data.len());
-                        match header.format {
-                            Format::Voice => {
-                                match Voice::parse(&payload) {
-                                    Ok(voice) => {
-                                        println!("{}", voice);
-                                    },
-                                    Err(e) => {
-                                        eprintln!("{}", e);
-                                    }
+    let Ok(Message::ManufacturerSpecific { manufacturer, payload }) 
+            = Message::from_bytes(&buffer) else {
+        eprintln!("Error in message");
+        return;
+    };
 
-                                }
-                            },
-                            Format::Cartridge => {
-                                match Cartridge::parse(&payload) {
-                                    Ok(cartridge) => {
-                                        if let Some(n) = number {
-                                            println!("{}", cartridge.voices[(*n as usize) - 1]);
-                                        }
-                                        else {
-                                            for voice in cartridge.voices.iter() {
-                                                println!("{}", voice);
-                                            }
-                                        }
-                                    },
-                                    Err(e) => {
-                                        eprintln!("{}", e);
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        eprintln!("{}", e);
-                    }
+    let Ok(header) = Header::parse(&payload) else {
+        eprintln!("Error parsing header");
+        return;
+    };
+
+    println!("Manufacturer = {}", manufacturer);
+    println!("Payload = {} bytes (between F0 43 ... F7)", payload.len());
+    println!("Header = {} (length = {} bytes)", header, Header::DATA_SIZE);
+
+    let data_start = Header::DATA_SIZE;
+    let data_end = payload.len() - 1;
+    let data = &payload[data_start .. data_end];
+    println!("data length = {} [{}..{}]", data.len(), data_start, data_end);
+
+    match header.format {
+        Format::Voice => {
+            match Voice::parse(&data) {
+                Ok(voice) => {
+                    println!("{}", voice);
+                },
+                Err(e) => {
+                    eprintln!("{}", e);
                 }
-            },
-            Err(err) => {
-                eprintln!("Error in message: {:?}", err);
-            },
-            _ => {
-                eprintln!("Not a manufacturer-specific System Exclusive message");
+
+            }
+        },
+        Format::Cartridge => {
+            match Cartridge::parse(&data) {
+                Ok(cartridge) => {
+                    if let Some(n) = number {
+                        println!("{}", cartridge.voices[(*n as usize) - 1]);
+                    }
+                    else {
+                        for voice in cartridge.voices.iter() {
+                            println!("{}", voice);
+                        }
+                    }
+                },
+                Err(e) => {
+                    eprintln!("{}", e);
+                }
             }
         }
     }
@@ -482,7 +483,7 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
     let mut cartridge: Cartridge = Default::default();
     let mut voice_index: usize = 0;  // index of next voice to save in the cartridge
     let mut voice: Voice = Default::default();
-    let mut operator_index: usize = 0;  // index of operator to save in voice
+    let mut operator_index: usize = 1; // index of operator to save in voice
     let mut operator: Operator = Operator::new();
     let mut keyboard_level_scaling: KeyboardLevelScaling = KeyboardLevelScaling::new();
     let mut eg: Envelope = Envelope::new();
@@ -650,6 +651,9 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                             }
                         }
                     },
+                    "operators" => {
+                        operator_index = 0;
+                    }
                     "peg" => {  // voice PEG
                         inside_eg = true;
                     }
@@ -666,6 +670,7 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                         //println!("rates[{}] = {}", index, rates[index]);
                         index += 1;
                     }
+                    eg.rates = rates;
                 } else if inside_levels {
                     //println!("levels = {}", text);
                     let parts: Vec<&str> = text.split(" ").collect();
@@ -675,6 +680,7 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                         //println!("levels[{}] = {}", index, levels[index]);
                         index += 1;
                     }
+                    eg.levels = levels;
                 } else {
                     println!("???, text = {}", text);
                 }
@@ -693,10 +699,14 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                         operator_index = 0;  // voice added, reset operator count
                     },
                     "operator" => {
+                        println!("voice {}, operator {}", voice_index, operator_index);
                         inside_operator = false;
                         let mut ops = voice.operators;
                         ops[operator_index] = operator;
                         operator_index += 1;
+                    },
+                    "operators" => {
+                        operator_index = 0;  // definitely need to reset
                     },
                     "keyboard_level_scaling" => {
                         operator.kbd_level_scaling = keyboard_level_scaling;

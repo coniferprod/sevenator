@@ -11,7 +11,8 @@ num = "0.4.3"
 rand = "0.9.0"
 bit = "0.1.1"
 syxpack = "0.17.0"
-sevenate = { git = "https://github.com/coniferprod/sevenate-rs.git" }
+#sevenate = { git = "https://github.com/coniferprod/sevenate-rs.git" }
+sevenate = { path = "../sevenate-rs" }
 clap = { version = "4.5.32", features = ["derive"] }
 xml-builder = "0.5.4"
 dbg_hex = "0.2.0"

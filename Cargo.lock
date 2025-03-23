@@ -481,7 +481,6 @@ dependencies = [
 [[package]]
 name = "sevenate"
 version = "0.5.0"
-source = "git+https://github.com/coniferprod/sevenate-rs.git#dab4fb38190f7a6b605c4fd88453713e63827a9b"
 dependencies = [
  "bit",
  "dbg_hex",

@@ -235,3 +235,5 @@ To validate an XML document, use xmllint like so:
 
 This will process the XInclude elements first, and then validate the result
 against the XML Schema.
+
+See also [XML Parsing in Rust](https://mainmatter.com/blog/2020/12/31/xml-and-rust/).
