@@ -260,7 +260,7 @@ impl ToXml for Cartridge {
             voices_element.add_child(voice.to_xml()).unwrap();
         }
 
-        e.add_child(voices_element);
+        let _ = e.add_child(voices_element);
         e
     }
 }
@@ -287,7 +287,7 @@ impl ToXml for Voice {
         for op in self.operators {
             op_e.add_child(op.to_xml()).unwrap();
         }
-        e.add_child(op_e);
+        let _ = e.add_child(op_e);
 
         e
     }
@@ -333,7 +333,7 @@ impl ToXml for Envelope {
         }
 
         rates_element.add_text(rates_string).unwrap();
-        e.add_child(rates_element);
+        let _ = e.add_child(rates_element);
 
         let mut levels_element = XMLElement::new("levels");
         let mut levels_string = String::new();
@@ -346,7 +346,7 @@ impl ToXml for Envelope {
             }
         }
         levels_element.add_text(levels_string).unwrap();
-        e.add_child(levels_element);
+        let _ = e.add_child(levels_element);
 
         e
     }
@@ -389,12 +389,12 @@ impl ToXml for KeyboardLevelScaling {
         let mut depth_element = XMLElement::new("depth");
         depth_element.add_attribute("left", &self.left.depth.value().to_string());
         depth_element.add_attribute("right", &self.right.depth.value().to_string());
-        elem.add_child(depth_element);
+        let _ = elem.add_child(depth_element);
 
         let mut curve_element = XMLElement::new("curve");
         curve_element.add_attribute("left", &self.left.curve.to_string());
         curve_element.add_attribute("right", &self.right.curve.to_string());
-        elem.add_child(curve_element);
+        let _ = elem.add_child(curve_element);
 
         elem
     }
@@ -497,7 +497,7 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
     for element in parser {
         match element {
             Ok(XmlEvent::StartElement { name, attributes, namespace }) => {
-                println!("start {}", name);
+                //println!("start {}", name);
 
                 match name.local_name.as_str() {
                     "cartridge" => {},
@@ -607,7 +607,9 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                             }
                         }
                     },
-                    "eg" => { inside_eg = true; },
+                    "eg" => { 
+                        inside_eg = true; 
+                    },
                     "rates" => {
                         inside_rates = true;
                     },
@@ -646,29 +648,30 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                                 _ => {}
                             }
                         }
+                    },
+                    "peg" => {  // voice PEG
+                        inside_eg = true;
                     }
                     _ => {}
                 };
             },
             Ok(XmlEvent::Characters(text)) => {
-                //if inside_eg {
-                //    println!("inside eg, text = {}", text);
                 if inside_rates {
-                    println!("rates = {}", text);
+                    //println!("rates = {}", text);
                     let parts: Vec<&str> = text.split(" ").collect();
                     let mut index = 0;
                     for part in parts.iter() {
                         rates[index] = Rate::new(part.parse().expect("valid rate"));
-                        println!("rates[{}] = {}", index, rates[index]);
+                        //println!("rates[{}] = {}", index, rates[index]);
                         index += 1;
                     }
                 } else if inside_levels {
-                    println!("levels = {}", text);
+                    //println!("levels = {}", text);
                     let parts: Vec<&str> = text.split(" ").collect();
                     let mut index = 0;
                     for part in parts.iter() {
                         levels[index] = Level::new(part.parse().expect("valid level"));
-                        println!("levels[{}] = {}", index, levels[index]);
+                        //println!("levels[{}] = {}", index, levels[index]);
                         index += 1;
                     }
                 } else {
@@ -679,8 +682,7 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                 println!("CDATA = {}", content);
             },
             Ok(XmlEvent::EndElement { name }) => {
-                println!("end {}", name);
-
+                //println!("end {}", name);
                 match name.local_name.as_str() {
                     "cartridge" => {},
                     "voice" => {
@@ -708,16 +710,15 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                     },
                     "eg" => {
                         inside_eg = false;
-                        if inside_voice {
-                            println!("assigning voice PEG to {}", eg);
-                            voice.peg = eg;
-                        } else if inside_operator {
-                            println!("assigning operator EG to {}", eg);
-                            operator.eg = eg;
-                        }
+                        //println!("assigning operator EG to {}", eg);
+                        operator.eg = eg;
                     },
                     "lfo" => {
                         voice.lfo = lfo;
+                    },
+                    "peg" => {
+                        //println!("assigning voice PEG to {}", eg);
+                        voice.peg = eg;
                     }
                     _ => {}
                 }
@@ -731,6 +732,7 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
     }
 
     // Print the results for debugging:
+    /*
     for voice in cartridge.voices {
         println!("{} {}", voice.name.value(), voice.alg.value());
         for op in voice.operators {
@@ -738,4 +740,7 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
         }
         println!();
     }
+     */
+
+
 }
