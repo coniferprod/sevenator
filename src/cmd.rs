@@ -691,24 +691,28 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
             Ok(XmlEvent::EndElement { name }) => {
                 //println!("end {}", name);
                 match name.local_name.as_str() {
-                    "cartridge" => {},
+                    "cartridge" => {
+                        println!("cartridge done");
+                    },
                     "voice" => {
                         inside_voice = false;
                         cartridge.voices[voice_index] = voice.clone();
+                        println!("voice #{} added to cartridge:", voice_index + 1);
+                        println!("{}", voice);
                         voice_index += 1;
                         operator_index = 0;  // voice added, reset operator count
                     },
                     "operator" => {
                         println!("voice {}, operator {}", voice_index, operator_index);
                         inside_operator = false;
-                        let mut ops = voice.operators;
-                        ops[operator_index] = operator;
+                        voice.operators[operator_index] = operator.clone();
                         operator_index += 1;
                     },
                     "operators" => {
                         operator_index = 0;  // definitely need to reset
                     },
-                    "keyboard_level_scaling" => {
+                    "keyboardLevelScaling" => {
+                        println!("KLS = {}", keyboard_level_scaling);
                         operator.kbd_level_scaling = keyboard_level_scaling;
                     },
                     "rates" => {
