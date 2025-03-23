@@ -20,6 +20,7 @@ use sevenate::dx7::sysex::{
     Format,
     Header,
     SystemExclusiveData,
+    MIDIChannel,
     checksum
 };
 
@@ -742,5 +743,24 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
     }
      */
 
+    let header = Header { 
+        channel: MIDIChannel::new(1), 
+        sub_status: 0,
+        format: Format::Cartridge,
+        byte_count: 4096
+    };
 
+    let mut data = Vec::<u8>::new();
+    data.extend(header.to_bytes());
+
+    let cartridge_data = cartridge.to_bytes();
+    data.extend(&cartridge_data);
+    data.push(checksum(&cartridge_data));
+
+    let message = Message::ManufacturerSpecific { 
+        manufacturer: Manufacturer::Standard(0x43), 
+        payload: data
+    };
+
+    let _ = write_file(output_path, &message.to_bytes());
 }
