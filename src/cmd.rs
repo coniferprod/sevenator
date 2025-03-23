@@ -6,6 +6,7 @@ use std::str;
 
 use dbg_hex::dbg_hex;
 
+use env_logger::Env;
 use sevenate::Ranged;
 use syxpack::{
     Message,
@@ -238,7 +239,7 @@ pub fn run_dump(path: &PathBuf, number: &Option<u8>) {
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 use sevenate::dx7::lfo::Lfo;
 use sevenate::dx7::envelope::Envelope;
-use sevenate::dx7::operator::{KeyboardLevelScaling, Operator};
+use sevenate::dx7::operator::{KeyboardLevelScaling, Operator, ScalingCurve};
 
 trait ToXml {
     fn to_xml(&self) -> XMLElement;
@@ -458,7 +459,10 @@ pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
 use std::io::BufReader;
 use xml::reader::{EventReader, XmlEvent};
 use sevenate::dx7::voice::VoiceName;
-use sevenate::dx7::{Algorithm, Transpose, Depth};
+use sevenate::dx7::{Algorithm, Transpose, Depth, Level, Coarse, Detune, Sensitivity};
+use sevenate::dx7::operator::{OperatorMode, Key};
+use sevenate::dx7::envelope::{Rate, Rates, Levels};
+use sevenate::dx7::lfo::LfoWaveform;
 
 pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
     let file = match File::open(input_path) {
@@ -479,6 +483,17 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
     let mut voice: Voice = Default::default();
     let mut operator_index: usize = 0;  // index of operator to save in voice
     let mut operator: Operator = Operator::new();
+    let mut keyboard_level_scaling: KeyboardLevelScaling = KeyboardLevelScaling::new();
+    let mut eg: Envelope = Envelope::new();
+    let mut inside_eg: bool = false;
+    let mut inside_rates: bool = false;
+    let mut inside_levels: bool = false;
+    let mut rates: Rates = [Default::default(); 4];
+    let mut levels: Levels = [Default::default(); 4];
+    let mut inside_operator: bool = false;
+    let mut inside_voice: bool = false;
+    let mut lfo: Lfo = Lfo::new();
+
     for element in parser {
         match element {
             Ok(XmlEvent::StartElement { name, attributes, namespace }) => {
@@ -487,6 +502,7 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                 match name.local_name.as_str() {
                     "cartridge" => {},
                     "voice" => {
+                        inside_voice = true;
                         for attr in attributes {
                             match attr.name.local_name.as_str() {
                                 "name" => {
@@ -512,28 +528,197 @@ pub fn run_make_syx(input_path: &PathBuf, output_path: &PathBuf) {
                         }
                     },
                     "operator" => {
-
+                        inside_operator = true;
+                        for attr in attributes {
+                            match attr.name.local_name.as_str() {
+                                "level" => {
+                                    operator.output_level = Level::new(attr.value.parse().expect("valid level"));
+                                },
+                                "mode" => {
+                                    operator.mode = if attr.value == "ratio" { OperatorMode::Ratio } else { OperatorMode::Fixed }; 
+                                },
+                                "coarse" => {
+                                    operator.coarse = Coarse::new(attr.value.parse().expect("valid coarse"));
+                                },
+                                "fine" => {
+                                    operator.fine = Level::new(attr.value.parse().expect("valid fine"));
+                                },
+                                "detune" => {
+                                    operator.detune = Detune::new(attr.value.parse().expect("valid detune"));
+                                },
+                                "amplitudeModulationSensitivity" => {
+                                    operator.amp_mod_sens = Sensitivity::new(attr.value.parse().expect("valid AMS"));
+                                },
+                                "keyVelocitySensitivity" => {
+                                    operator.key_vel_sens = Depth::new(attr.value.parse().expect("valid KLS"));
+                                },
+                                "keyboardRateScaling" => {
+                                    operator.kbd_rate_scaling = Depth::new(attr.value.parse().expect("valid keyboard rate scaling"));
+                                },
+                                _ => {}
+                            }
+                        }
+                    },
+                    "keyboardLevelScaling" => {
+                        for attr in attributes {
+                            match attr.name.local_name.as_str() {
+                                "breakpoint" => {
+                                    keyboard_level_scaling.breakpoint = Key::new(attr.value.parse().expect("valid key"));
+                                },
+                                _ => {}
+                            }
+                        }
+                    },
+                    "depth" => {  // must be inside keyboardLevelScaling
+                        for attr in attributes {
+                            match attr.name.local_name.as_str() {
+                                "left" => {
+                                    keyboard_level_scaling.left.depth = Level::new(attr.value.parse().expect("valid depth"));
+                                },
+                                "right" => {
+                                    keyboard_level_scaling.right.depth = Level::new(attr.value.parse().expect("valid depth"));
+                                },
+                                _ => {}
+                            }
+                        }
+                    },
+                    "curve" => {  // must be inside keyboardLevelScaling
+                        for attr in attributes {
+                            match attr.name.local_name.as_str() {
+                                "left" => {
+                                    keyboard_level_scaling.left.curve = match attr.value.as_str() {
+                                        "+LIN" => ScalingCurve::lin_pos(),
+                                        "-LIN" => ScalingCurve::lin_neg(),
+                                        "+EXP" => ScalingCurve::exp_pos(),
+                                        "-EXP" => ScalingCurve::exp_neg(),
+                                        _ => { ScalingCurve::lin_pos() }
+                                    };
+                                },
+                                "right" => {
+                                    keyboard_level_scaling.right.curve = match attr.value.as_str() {
+                                        "+LIN" => ScalingCurve::lin_pos(),
+                                        "-LIN" => ScalingCurve::lin_neg(),
+                                        "+EXP" => ScalingCurve::exp_pos(),
+                                        "-EXP" => ScalingCurve::exp_neg(),
+                                        _ => { ScalingCurve::lin_pos() }
+                                    };
+                                },
+                                _ => {}
+                            }
+                        }
+                    },
+                    "eg" => { inside_eg = true; },
+                    "rates" => {
+                        inside_rates = true;
+                    },
+                    "levels" => {
+                        inside_levels = true;
+                    },
+                    "lfo" => {
+                        for attr in attributes {
+                            match attr.name.local_name.as_str() {
+                                "speed" => {
+                                    lfo.speed = Level::new(attr.value.parse().expect("valid speed"));
+                                },
+                                "delay" => {
+                                    lfo.delay = Level::new(attr.value.parse().expect("valid delay"));
+                                },
+                                "pmd" => {
+                                    lfo.pmd = Level::new(attr.value.parse().expect("valid PMD"));
+                                },
+                                "amd" => {
+                                    lfo.amd = Level::new(attr.value.parse().expect("valid AMD"));
+                                },
+                                "sync" => {
+                                    lfo.sync = attr.value.parse().expect("valid sync");
+                                },
+                                "wave" => {
+                                    lfo.waveform = match attr.value.as_str() {
+                                        "triangle" => LfoWaveform::Triangle,
+                                        "saw-down" => LfoWaveform::SawDown,
+                                        "saw-up" => LfoWaveform::SawUp,
+                                        "square" => LfoWaveform::Square,
+                                        "sine" => LfoWaveform::Sine,
+                                        "sample-and-hold" => LfoWaveform::SampleAndHold,
+                                        _ => LfoWaveform::Sine
+                                    }
+                                },
+                                _ => {}
+                            }
+                        }
                     }
                     _ => {}
                 };
-
-            }
+            },
+            Ok(XmlEvent::Characters(text)) => {
+                //if inside_eg {
+                //    println!("inside eg, text = {}", text);
+                if inside_rates {
+                    println!("rates = {}", text);
+                    let parts: Vec<&str> = text.split(" ").collect();
+                    let mut index = 0;
+                    for part in parts.iter() {
+                        rates[index] = Rate::new(part.parse().expect("valid rate"));
+                        println!("rates[{}] = {}", index, rates[index]);
+                        index += 1;
+                    }
+                } else if inside_levels {
+                    println!("levels = {}", text);
+                    let parts: Vec<&str> = text.split(" ").collect();
+                    let mut index = 0;
+                    for part in parts.iter() {
+                        levels[index] = Level::new(part.parse().expect("valid level"));
+                        println!("levels[{}] = {}", index, levels[index]);
+                        index += 1;
+                    }
+                } else {
+                    println!("???, text = {}", text);
+                }
+            },
+            Ok(XmlEvent::CData(content)) => {
+                println!("CDATA = {}", content);
+            },
             Ok(XmlEvent::EndElement { name }) => {
                 println!("end {}", name);
 
                 match name.local_name.as_str() {
                     "cartridge" => {},
                     "voice" => {
+                        inside_voice = false;
                         cartridge.voices[voice_index] = voice.clone();
                         voice_index += 1;
                         operator_index = 0;  // voice added, reset operator count
-
                     },
                     "operator" => {
+                        inside_operator = false;
                         let mut ops = voice.operators;
                         ops[operator_index] = operator;
                         operator_index += 1;
                     },
+                    "keyboard_level_scaling" => {
+                        operator.kbd_level_scaling = keyboard_level_scaling;
+                    },
+                    "rates" => {
+                        inside_rates = false;
+                        eg.rates = rates;
+                    },
+                    "levels" => {
+                        inside_levels = false;
+                        eg.levels = levels;
+                    },
+                    "eg" => {
+                        inside_eg = false;
+                        if inside_voice {
+                            println!("assigning voice PEG to {}", eg);
+                            voice.peg = eg;
+                        } else if inside_operator {
+                            println!("assigning operator EG to {}", eg);
+                            operator.eg = eg;
+                        }
+                    },
+                    "lfo" => {
+                        voice.lfo = lfo;
+                    }
                     _ => {}
                 }
             }
