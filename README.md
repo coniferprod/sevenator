@@ -30,10 +30,9 @@ into a dedicated package [sevenate-rs](https://github.com/coniferprod/sevenate-r
 ## Building the program
 
 Sevenator is written in Rust. You can use the Rust development tools to make
-an executable version for your (supprted) operating system. See [the Rust home page](https://www.rust-lang.org) for details about installation.
+an executable version for your (supported) operating system. See [the Rust home page](https://www.rust-lang.org) for details about installation.
 
-Clone the source code from the Git repository into a subdirectory, and then
-issue the command
+Clone the source code from the Git repository into a subdirectory, change to that subdirectory, and then issue the command
 
     cargo build
 
