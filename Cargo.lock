@@ -480,11 +480,12 @@ dependencies = [
 
 [[package]]
 name = "sevenate"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "bit",
  "dbg_hex",
  "log",
+ "num",
  "rand 0.8.5",
 ]
 
