@@ -36,13 +36,13 @@ struct MovementParameters {
     velocity: Level,
 }
 
-struct RandomizationParameters {
+pub struct RandomizationParameters {
     timbre: TimbreParameters,
     envelope: EnvelopeParameters,
     movement: MovementParameters,
 }
 
-fn randomize(params: RandomizationParameters) -> Voice {
+pub fn randomize(params: RandomizationParameters) -> Voice {
     // DX7 algorithms from least complex to most.
     let algorithm_lookup = [
         32, 31, 25, 24, 30, 29, 23, 22, 21, 5, 6, 28, 27, 26, 19, 20,
@@ -90,8 +90,8 @@ fn randomize(params: RandomizationParameters) -> Voice {
 
     let count = algorithm_lookup.len() as i32;
     let q = count / 8;
-    let mut rng = rand::thread_rng();
-    let x = rng.gen_range(-q..=q);
+    let mut rng = rand::rng();
+    let x = rng.random_range(-q..=q);
 
     /*
         Math.max(0,
@@ -114,7 +114,7 @@ fn randomize(params: RandomizationParameters) -> Voice {
     // Set operator levels. Carriers should be well audible.
     let carriers = &carrier_lookup[(algorithm.value() - 1) as usize];
     for carrier_op in carriers.iter() {
-        voice.operators[carrier_op - 1].output_level = Level::new(rng.gen_range(90..=99));
+        voice.operators[carrier_op - 1].output_level = Level::new(rng.random_range(90..=99));
     }
 
     // ...and so on... (WIP)

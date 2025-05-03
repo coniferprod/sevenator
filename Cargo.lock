@@ -486,7 +486,6 @@ dependencies = [
  "bit",
  "dbg_hex",
  "log",
- "num",
  "rand 0.8.5",
 ]
 

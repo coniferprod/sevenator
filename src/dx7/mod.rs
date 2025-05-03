@@ -43,7 +43,7 @@ pub mod randomizer;
 // Makes a cartridge filled with random voices.
 pub fn make_random_cartridge() -> Cartridge {
     let mut voices: Vec<Voice> = Vec::new();
-    for i in 0..VOICE_COUNT {
+    for _ in 0..VOICE_COUNT {
         voices.push(make_random_voice());
     }
     Cartridge { voices }
@@ -60,8 +60,8 @@ pub fn make_random_voice() -> Voice {
     voice.alg = Algorithm::random();
     voice.feedback = Depth::random();
 
-    let mut rng = rand::thread_rng();
-    voice.osc_sync = rng.gen();
+    let mut rng = rand::rng();
+    voice.osc_sync = rng.random();
 
     voice.lfo = Lfo::random();
     voice.pitch_mod_sens = Depth::random();

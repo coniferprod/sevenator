@@ -1,35 +1,8 @@
-use std::fs;
-use std::env;
-use std::path::{
-    Path,
-    PathBuf
-};
-use std::io::{
-    Read,
-    Error
-};
-use std::time::{
-    SystemTime,
-    UNIX_EPOCH
-};
+use std::path::PathBuf;
 
 use clap::{
     Parser,
     Subcommand
-};
-
-use sevenate::Ranged;
-use sevenate::dx7::sysex::{
-    SystemExclusiveData,
-    Header,
-    Format,
-    MIDIChannel,
-    checksum
-};
-
-use syxpack::{
-    Message,
-    Manufacturer
 };
 
 pub mod cmd;
@@ -53,16 +26,19 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// List the voices in a cartridge file
     List {
         #[arg(short, long)]
         file: PathBuf,
     },
 
+    /// Extract the voices in a cartridge file to separate voice files
     Extract {
         #[arg(short, long)]
         file: PathBuf,
     },
 
+    /// Dump a System Exclusive file
     Dump {
         #[arg(short, long)]
         file: PathBuf,
@@ -71,6 +47,7 @@ enum Commands {
         number: Option<u8>,
     },
 
+    /// Make XML file from System Exclusive
     MakeXml {
         #[arg(short, long)]
         input_file: PathBuf,
@@ -118,11 +95,4 @@ fn main() {
             run_make_syx(&input_path, &output_path);
         }
     }
-}
-
-
-fn write_file(path: &PathBuf, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
-    //let mut f = fs::File::create(&name).expect("create file");
-    fs::write(path, data)?;
-    Ok(())
 }
