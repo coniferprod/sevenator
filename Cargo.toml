@@ -6,14 +6,14 @@ edition = "2021"
 
 [dependencies]
 env_logger = "0.11.7"
-log = "0.4.26"
+log = "0.4.27"
 num = "0.4.3"
-rand = "0.9.0"
+rand = "0.9.1"
 bit = "0.1.1"
 syxpack = "0.17.0"
 sevenate = { git = "https://github.com/coniferprod/sevenate-rs.git" }
 #sevenate = { path = "../sevenate-rs" }
-clap = { version = "4.5.32", features = ["derive"] }
+clap = { version = "4.5.38", features = ["derive"] }
 xml-builder = "0.5.4"
 dbg_hex = "0.2.0"
-xml-rs = "0.8.25"
+xml-rs = "0.8.26"
