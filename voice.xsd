@@ -50,14 +50,14 @@
         </xsd:restriction>
     </xsd:simpleType>
 
-    <!-- Coarse 0...31 -->
+    <!-- Coarse 0...31 (0.5, 1, 2, 3, ..., 31) -->
     <xsd:simpleType name="coarseType">
         <xsd:restriction base="xsd:nonNegativeInteger">
             <xsd:maxInclusive value="31"/>
         </xsd:restriction>
     </xsd:simpleType>
 
-    <!-- Fine 0...99 -->
+    <!-- Fine 0...99 (a multiplier of 1.00, 1.01, 1.02, 1.03 up to 1.99) -->
     <xsd:simpleType name="fineType">
         <xsd:restriction base="xsd:nonNegativeInteger">
             <xsd:maxInclusive value="99"/>
@@ -120,6 +120,7 @@
     </xsd:simpleType>
 
     <!-- Breakpoint key is MIDI note 0...127 -->
+    <!-- 1 = A-1 ... 39 = C3 ... 99 = C8-->
     <xsd:simpleType name="keyType">
         <xsd:restriction base="xsd:nonNegativeInteger">
             <xsd:maxInclusive value="127"/>

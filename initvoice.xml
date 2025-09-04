@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Yamaha DX7 voice init, as described in Massey, "The Complete DX7", Appendix B -->
+<!-- Frequency coarse and frequency fine are both specified as 1.0, but they should probably
+     be 1 and 0, respectively, so that f = coarse * fine. For example, coarse = 3, fine = 0
+     would result in 3*1.00=3.00, while coarse=3 fine=1 would result in 3*1.01=3.03. Right?
+     (See https://blog.jacobvosmaer.nl/0050-fm-pitch-ratios/) -->
+<voice name="INIT VOICE" algorithm="11" feedback="0" transpose="0"
+       oscillatorSync="true" pitchModulationSensitivity="3">
+    <operators>
+        <operator level="99" mode="ratio" coarse="1" fine="0" detune="0"
+            amplitudeModulationSensitivity="0" keyVelocitySensitivity="0" keyboardRateScaling="0">
+            <eg>
+                <rates>99 99 99 99</rates>
+                <levels>99 99 99 0</levels>
+            </eg>
+            <keyboardLevelScaling breakpoint="1">
+                <depth left="0" right="0" />
+                <curve left="-LIN" right="-LIN" />
+            </keyboardLevelScaling>
+        </operator>
+
+        <operator level="0" mode="ratio" coarse="0" fine="0" detune="0"
+            amplitudeModulationSensitivity="0" keyVelocitySensitivity="0" keyboardRateScaling="0">
+            <eg>
+                <rates>99 99 99 99</rates>
+                <levels>99 99 99 0</levels>
+            </eg>
+            <keyboardLevelScaling breakpoint="1">
+                <depth left="0" right="0" />
+                <curve left="-LIN" right="-LIN" />
+            </keyboardLevelScaling>
+        </operator>
+
+        <operator level="0" mode="ratio" coarse="0" fine="0" detune="0"
+            amplitudeModulationSensitivity="0" keyVelocitySensitivity="0" keyboardRateScaling="0">
+            <eg>
+                <rates>99 99 99 99</rates>
+                <levels>99 99 99 0</levels>
+            </eg>
+            <keyboardLevelScaling breakpoint="1">
+                <depth left="0" right="0" />
+                <curve left="-LIN" right="-LIN" />
+            </keyboardLevelScaling>
+        </operator>
+
+        <operator level="0" mode="ratio" coarse="0" fine="0" detune="0"
+            amplitudeModulationSensitivity="0" keyVelocitySensitivity="0" keyboardRateScaling="0">
+            <eg>
+                <rates>99 99 99 99</rates>
+                <levels>99 99 99 0</levels>
+            </eg>
+            <keyboardLevelScaling breakpoint="1">
+                <depth left="0" right="0" />
+                <curve left="-LIN" right="-LIN" />
+            </keyboardLevelScaling>
+        </operator>
+
+        <operator level="0" mode="ratio" coarse="0" fine="0" detune="0"
+            amplitudeModulationSensitivity="0" keyVelocitySensitivity="0" keyboardRateScaling="0">
+            <eg>
+                <rates>99 99 99 99</rates>
+                <levels>99 99 99 0</levels>
+            </eg>
+            <keyboardLevelScaling breakpoint="1">
+                <depth left="0" right="0" />
+                <curve left="-LIN" right="-LIN" />
+            </keyboardLevelScaling>
+        </operator>
+
+        <operator level="0" mode="ratio" coarse="0" fine="0" detune="0"
+            amplitudeModulationSensitivity="0" keyVelocitySensitivity="0" keyboardRateScaling="0">
+            <eg>
+                <rates>99 99 99 99</rates>
+                <levels>99 99 99 0</levels>
+            </eg>
+            <keyboardLevelScaling breakpoint="1">
+                <depth left="0" right="0" />
+                <curve left="-LIN" right="-LIN" />
+            </keyboardLevelScaling>
+        </operator>
+    </operators>
+
+    <peg>
+        <rates>99 99 99 99</rates>
+        <levels>50 50 50 50</levels>
+    </peg>
+
+    <lfo wave="triangle" speed="35" delay="0" pmd="0" amd="0" sync="true"/>
+/</voice>
