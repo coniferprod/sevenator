@@ -642,7 +642,7 @@ dependencies = [
 
 [[package]]
 name = "sevenator"
-version = "0.16.2"
+version = "0.17.0"
 dependencies = [
  "bit",
  "clap",
@@ -651,12 +651,8 @@ dependencies = [
  "log",
  "midir",
  "num",
-<<<<<<< HEAD
- "rand 0.9.1",
- "rusty-cmd",
-=======
  "rand",
->>>>>>> 8fbb86ccd850b1c8ebf295baef74001b7d241589
+ "rusty-cmd",
  "sevenate",
  "syxpack",
  "xml-builder",
