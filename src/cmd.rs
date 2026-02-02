@@ -1,12 +1,21 @@
 use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
+use std::io;
 use std::io::{Read, Write};
+use std::io::BufReader;
+
 use std::str;
-
 use dbg_hex::dbg_hex;
-
 use env_logger::Env;
+
+use rusty_cmd::cmd::Cmd;
+use rusty_cmd::command_handler::{
+    CommandHandler,
+    CommandResult
+};
+use rusty_cmd::handlers::Quit;
+
 use sevenate::Ranged;
 use syxpack::{
     Message,
@@ -43,6 +52,71 @@ fn read_file(name: &PathBuf) -> Option<Vec<u8>> {
 fn write_file(path: &PathBuf, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
     //let mut f = fs::File::create(&name).expect("create file");
     fs::write(path, data)?;
+    Ok(())
+}
+
+/// CommandHandler that prints out help message
+#[derive(Default)]
+pub struct Help;
+
+impl<W> CommandHandler<W> for Help
+        where W: std::io::Write, {
+    fn execute(&self, output: &mut W, _args: &[&str]) -> CommandResult {
+        writeln!(
+            output, 
+            "This is the friendly help message")
+        .expect("Should be able to write to output");
+        CommandResult::Continue
+    }
+}
+
+use midir::{Ignore, MidiInput, MidiOutput};
+
+/// Command handler for the `ports` command to list MIDI ports
+#[derive(Default)]
+pub struct Ports;
+
+impl<W> CommandHandler<W> for Ports
+        where W: std::io::Write, {
+    fn execute(&self, output: &mut W, _args: &[&str]) -> CommandResult {
+        let mut midi_in = MidiInput::new("sevenator test input").unwrap();
+        midi_in.ignore(Ignore::None);
+        let midi_out = MidiOutput::new("sevenator test output").unwrap();
+        
+        writeln!(output, "Available MIDI input ports:")
+            .expect("Should be able to write to output");
+        for (id, port) in midi_in.ports().iter().enumerate() {
+            writeln!(
+                output, 
+                "{}: {} (ID: \"{}\")", id, midi_in.port_name(port).unwrap(), port.id())
+            .expect("Should be able to write to output");
+        }
+
+        writeln!(output, "\nAvailable MIDI output ports:")
+            .expect("Should be able to write to output");
+        for (id, port) in midi_out.ports().iter().enumerate() {
+            writeln!(
+                output, 
+                "{}: {} (ID: \"{}\")", id, midi_out.port_name(port).unwrap(), port.id())
+                .expect("Should be able to write to output");
+        }        
+
+        CommandResult::Continue
+    }
+}
+
+pub fn run_repl() -> Result<(), std::io::Error> {
+    let mut cmd = Cmd::new(io::BufReader::new(io::stdin()), io::stdout());
+    let help = Help;
+    let quit = Quit::default();
+    let ports = Ports;
+
+    cmd.add_cmd(String::from("help"), help)?;
+    cmd.add_cmd(String::from("quit"), quit)?;
+    cmd.add_cmd(String::from("ports"), ports)?;
+
+    cmd.run()?;
+
     Ok(())
 }
 
@@ -458,7 +532,6 @@ pub fn run_make_xml(input_path: &PathBuf, output_path: &PathBuf) {
     }    
 }
 
-use std::io::BufReader;
 use xml::reader::{EventReader, XmlEvent};
 use sevenate::dx7::voice::VoiceName;
 use sevenate::dx7::{Algorithm, Transpose, Depth, Level, Coarse, Detune, Sensitivity};

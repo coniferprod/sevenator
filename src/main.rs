@@ -15,6 +15,7 @@ use crate::cmd::{
     run_dump,
     run_make_xml,
     run_make_syx,
+    run_repl,
 };
 
 #[derive(Parser)]
@@ -63,7 +64,10 @@ enum Commands {
 
         #[arg(short, long)]
         output_file: PathBuf,
-    }
+    },
+
+    /// Start a REPL for commands
+    Repl,
 }
 
 fn main() {
@@ -93,6 +97,9 @@ fn main() {
             let input_path = PathBuf::from(input_file);
             let output_path = PathBuf::from(output_file);
             run_make_syx(&input_path, &output_path);
-        }
+        },
+        Commands::Repl => {
+            run_repl().unwrap();
+        },
     }
 }
