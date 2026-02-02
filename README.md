@@ -22,7 +22,7 @@ a subset of the parameters to randomize.
 Currently Sevenator generates either a single voice (initialized to factory defaults, or
 completely random) or a "cartridge" with the same 32 patches
 repeated over, with some random envelopes, but it may get some patch generation
-methods of its own as it is developed. 
+methods of its own as it is developed.
 
 The DX7 data model and its API have been split
 into a dedicated package [sevenate-rs](https://github.com/coniferprod/sevenate-rs), so Sevenator is just one possible client of the API.
@@ -62,11 +62,11 @@ You should see the following:
     Usage: sevenator make-xml --input-file <INPUT_FILE> --output-file <OUTPUT_FILE>
 
     Options:
-      -i, --input-file <INPUT_FILE>    
-      -o, --output-file <OUTPUT_FILE>  
+      -i, --input-file <INPUT_FILE>
+      -o, --output-file <OUTPUT_FILE>
       -h, --help                       Print help
 
-So, for example, to convert the original ROM 1A cartridge of the Yamaha DX7 
+So, for example, to convert the original ROM 1A cartridge of the Yamaha DX7
 to the XML format, use the command
 
     sevenator make-xml --input-file ROM1A.SYX --output-file rom1a.xml
@@ -79,9 +79,11 @@ available online in the Yamaha Manual Library. A description of the packed forma
 can be found in the [Dexed documentation](https://github.com/asb2m10/dexed/blob/master/Documentation/sysex-format.txt).
 
 The Yamaha DX7 cartridge data is 4,096 bytes long (not counting the System
-Exclusive initiator and terminator, and the dump header, which bring it up to 4,104 bytes). 
+Exclusive initiator and terminator, and the dump header, which bring it up to 4,104 bytes).
 It contains packed data for 32 voices, so the data for one voice is 128 bytes. An unpacked
 single voice is 155 bytes (with SysEx header 163 bytes).
+
+See the documentation for the `sevenate-rs` crate for more topical information about the patches.
 
 ## Yamaha TX802 notes
 
@@ -89,12 +91,15 @@ The Yamaha TX802 voice edit buffer accepts single voices in DX7 format.
 
 ## XML documents
 
-The voices and cartridges have an XML Schema definition (subject to change).
-To validate an XML document, use xmllint like so:
+The XML schema for cartridges and voices also now lives in its own
+GitHub repository [dx7-xml](https://github.com/coniferprod/dx7-xml).
 
-    xmllint --xinclude --schema cartridge.xsd testcartridge.xml
+To validate an XML document, make sure you have the schema files
+available, and then use `xmllint`:
+
+    xmllint --xinclude --schema schema/cartridge-0.1.xsd testcartridge.xml
 
 This will process the XInclude elements first, and then validate the result
-against the XML Schema.
+against the XML schema.
 
 See also [XML Parsing in Rust](https://mainmatter.com/blog/2020/12/31/xml-and-rust/).
